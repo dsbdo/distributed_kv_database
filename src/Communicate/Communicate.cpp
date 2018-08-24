@@ -169,15 +169,15 @@ void *Communicate::send_thread(void *arg)
 
 
         //在这里创建一个接收线程，并处理
-         char temp_buf[1024];
-        int recvbytes = 0;
-        if ((recvbytes = recv(sock_fd, temp_buf, 1024, 0)) == -1)
-        {
-            perror("recv出错！");
-            return 0;
-        }
-        temp_buf[recvbytes] = '\0';
-        printf("Received: %s", temp_buf);
+        // char temp_buf[1024];
+        // int recvbytes = 0;
+        // if ((recvbytes = recv(sock_fd, temp_buf, 1024, 0)) == -1)
+        // {
+        //     perror("recv出错！");
+        //     return 0;
+        // }
+        // temp_buf[recvbytes] = '\0';
+        // printf("Received: %s", temp_buf);
     }
     catch (int e)
     {
@@ -188,24 +188,29 @@ void *Communicate::send_thread(void *arg)
 
 void *Communicate::recv_thread(void *arg)
 {
+    std::cout << "Come in recv thread " << std::endl;
     char buf[K_BUF_SIZE];
     ssize_t byte_read = -1;
     std::vector<void *> arg_content = *(std::vector<void *> *)arg;
+    std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
     int sock_fd = *(int *)arg_content[1];
+    std::cout << "sock_fd is: " << sock_fd << std::endl;
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
     pthread_mutex_lock(sock_mutex);
     bool done = false;
-    std::string *ackmsg = (std::string *)arg_content[3];
+    std::string* ackmsg = (std::string *)arg_content[3];
     while (!done)
     {
         memset(buf, 0, K_BUF_SIZE);
         byte_read = read(sock_fd, buf, K_BUF_SIZE);
         //这里的byte_read 感觉相当危险，容易数组越界，而且不一定有访问啊
-        if (buf[byte_read - 1] == '\0')
+        if (buf[byte_read] == '\0')
         {
             done = true;
-            *ackmsg += std::string(buf);
+           
         }
+         *ackmsg += std::string(buf);
+        std::cout << "DEBUG log is: " << buf << std::endl;
     }
     pthread_mutex_unlock(sock_mutex);
 
@@ -213,6 +218,7 @@ void *Communicate::recv_thread(void *arg)
     {
         std::cerr << "\033[31m error waiting for ack errno=" << errno << " \033[0m" << std::endl;
     }
+    std::cout << "leave out the recv thread" << std::endl;  
     return 0;
 }
 

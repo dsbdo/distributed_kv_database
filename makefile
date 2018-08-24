@@ -1,11 +1,11 @@
 CC = g++
-FLAGS += -g -I. -I./include -I./util -I./test 
+FLAGS += -g -I./src -I./src/include -I./src/util -I./src/test 
 
 all: client.out server.out
-client.out: ./test/client_test.cpp ./Communicate/Communicate.cpp ./util/ThreadVar/ThreadVar.cpp 
-	$(CC) $(FLAGS) ./test/client_test.cpp  ./Communicate/Communicate.cpp ./util/ThreadVar/ThreadVar.cpp  -lpthread -ljsoncpp -o client.out
-server.out: ./test/server_test.cpp ./Server/Server.cpp ./util/ThreadVar/ThreadVar.cpp 
-	$(CC) $(FLAGS) ./test/server_test.cpp  ./Server/Server.cpp ./util/ThreadVar/ThreadVar.cpp  -lpthread -ljsoncpp -o server.out
+client.out: ./src/test/client_test.cpp ./src/Communicate/Communicate.cpp ./src/util/ThreadVar/ThreadVar.cpp 
+	$(CC) $(FLAGS) ./src/test/client_test.cpp  ./src/Communicate/Communicate.cpp ./src/util/ThreadVar/ThreadVar.cpp  -lpthread -ljsoncpp -o ./build/client.out
+server.out: ./src/test/server_test.cpp ./src/Server/Server.cpp ./src/util/ThreadVar/ThreadVar.cpp 
+	$(CC) $(FLAGS) ./src/test/server_test.cpp  ./src/Server/Server.cpp ./src/util/ThreadVar/ThreadVar.cpp  -lpthread -ljsoncpp -o ./build/server.out
 
 clean:
-	rm -rf *.out *.o 
+	rm -rf ./build/*.out  ./build/*.o 
