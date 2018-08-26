@@ -48,7 +48,7 @@ Server::Server(const char *local_ip, const uint16_t local_port)
         else
         {
             inet_pton(AF_INET, local_ip, (void *)&m_server_address.sin_addr);
-            //端口绑定
+            //端口绑定 因为通信的本质是socket之间的通讯，如果不bind的话，listen函数在监听这个socket的时候，并不知道具体的port，只会监听空闲的port
             if (bind(m_socket_fd, (sockaddr *)&m_server_address, sizeof(sockaddr_in)) == -1)
             {
                 throw K_SOCKET_BIND_ERROR;

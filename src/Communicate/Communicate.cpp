@@ -16,7 +16,7 @@ Communicate::Communicate(const char *remote_ip, const uint16_t remote_port)
         }
 
         memset(&m_server_address, 0, sizeof(sockaddr_in));
-        m_server_address.sin_family = AF_INET; // ipv4 协议
+        m_server_address.sin_family = AF_INET; // ipv4 协议(一般用AF_INET表示tcp/ip协议,int类型)
         //p 标识presentation n表示number，将点分十进制转换为二进制，如果ip地址出错呢
         inet_pton(AF_INET, remote_ip, (void *)&m_server_address.sin_addr);
         //intel 架构均是小端序存储，库文件实现的估计也是小端序，这里是转换成网络字节流（大端序）
@@ -59,7 +59,8 @@ std::string Communicate::sendString(const char *str)
     ThreadVar *thread_var = new ThreadVar(2L, 1L, 0L);
     std::string ackmsg;
 
-    std::vector<void *> thread_arg;
+    std::vector<void *> thread_arg; //发送的内容
+
     //需要发送的字符串
     thread_arg.push_back((void *)str);
     thread_arg.push_back((void *)&m_iSocket_fd);
@@ -96,7 +97,7 @@ std::string Communicate::sendString(const char *str)
     return ackmsg;
 }
 
-//用来被通知已经收到的函数
+//用来被通知已经收到的函数  就是记录一下client发过的数据，下面在这个之下创建线程的操作？？？
 void Communicate::sendStringNoBlock(const char *req, ThreadVar *client_thread_var, int *num_done, int *num_total, std::string *levelDB_back)
 {
     if (!m_bIsGoodConnect)
@@ -124,16 +125,16 @@ bool Communicate::isGoodConnect()
 
 void *Communicate::send_thread(void *arg)
 {
-    //arg 是一个vector 变量
-    //arg[0] = send_info
-    //arg[1] = socket_info
-    //arg[2] = thread_var;
-    //arg[3] = ackmsg
+    //arg 是一个vector 变量    point
+    //arg[0] = send_info     string
+     //arg[1] = socket_info  int 
+    //arg[2] = thread_var;   class
+    //arg[3] = ackmsg        string
     //ssize_t ==> signed size_t
     ssize_t byte_sent = -1;
     char buf[K_BUF_SIZE];
 
-    std::vector<void *> arg_content = *(std::vector<void *> *)arg;
+    std::vector<void *> arg_content = *(std::vector<void *> *)arg; //拷贝一份内容给arg_content
     int sock_fd = *(int *)arg_content[1];
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
     try
