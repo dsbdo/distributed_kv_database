@@ -16,8 +16,6 @@
 #include <sys/wait.h>
 #define NO_EINTR(stmt) while ((stmt) == -1 && errno == EINTR);
 
-//到时候再搬到木明那里去
-#define K_DB_FAIL 12;
 
 class LevelDbServer:public Server
 {
