@@ -88,6 +88,7 @@ int Server::acceptConnect()
         char *client_host_addr_p;
         int comm_socket_fd;
         bool is_known_client = true;
+        //上面的套接字是监听套接字，这个是返回一个全新的与客户端通讯的的套接字
         if ((comm_socket_fd = accept(m_socket_fd, (sockaddr *)&client_addr, &client_addr_len)) < 0)
         {
             std::cerr << "\033[31m"
