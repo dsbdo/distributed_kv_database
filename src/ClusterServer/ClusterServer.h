@@ -18,10 +18,12 @@ public:
      pthread_t* getThreadObj();
      //获取对应的集群的所有levelDB服务器
      std::vector<ip_port>* getServerList(const size_t cluster_id);
-
+     
+     //获取集群服务器的全局信息
      Json::Value getSerializedState();
+     
      //一个levelDB申请加入一个cluster 中
-     void joinCluster(std::string join_ip, uint16_t join_port);
+     void joinCluster(const std::string join_ip, const uint16_t join_port);
 
      // 心跳包发送处理 发给集群服务器心跳包的错误处理
      void heartBeatClusterServerErrHandle(ip_port dead_cluster_server);
@@ -32,6 +34,7 @@ public:
      void newMasterResponseHandle(std::string response_msg);
 private:
     struct ClusterMinHeap {
+        ClusterMinHeap();
         void changeSize(uint16_t cluster_id, uint16_t cluster_size);
         //获取最小堆的堆顶元素
         uint16_t getMinClusterId();
@@ -54,25 +57,24 @@ private:
     static void* send_thread(void*);
     static void* recv_thread(void*);
 
-    static void processClusterRequest(std::string request, std::string response, ClusterServer* cluster_server );
+    static void processClusterRequest(std::string request, std::string& response, ClusterServer* cluster_server );
 
     //添加一台levelDB服务器到集群中
     uint16_t registerServer(const std::string ip, const uint16_t port);
     time_t m_timestamp;
     void broadcastUpdateClusterState(const ip_port peer_ip_port);
     //brocast to cluster server
-    void broadcast(const ip_port exclude, const Json::Value msg, void (*err_handle)(void*) = NULL, void (*response_handle)(void*)=NULL);
+    void broadcast(const ip_port& exclude, const Json::Value& msg, void (*err_handle)(void*) = NULL, void (*response_handle)(void*)=NULL);
     //brocast to leveldb server
-    void broadcast(const std::vector<ip_port> receiver_set, const Json::Value msg,void (*err_handle)(void*) = NULL, void (*response_handle)(void*)=NULL);
+    void broadcast(const std::vector<ip_port>& receiver_set, const Json::Value& msg,void (*err_handle)(void*) = NULL, void (*response_handle)(void*)=NULL);
 
-    static void heartbeat_handler(int sign_num);
+    void updateClusterState(const Json::Value& root);
+
+    static void heartbeatHandler(int sign_num);
 
 public:
     bool m_is_master;
     bool m_get_heartbeat_msg;
     bool m_new_master_ongoing;
-
-
-
 };
 #endif

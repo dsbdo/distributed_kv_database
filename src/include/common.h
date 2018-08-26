@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <string>
 #include <iostream>
+#include<algorithm>
 #include<unistd.h>
 //这一个系统各种变量的基本值
 #include <sys/types.h>
@@ -26,6 +27,17 @@
 
 //与系统信号相关的头文件
 #include <signal.h>
+#define NO_EINTR(stmt) while ((stmt) == -1 && errno == EINTR);
+
+inline size_t hash(std::string& s)
+{
+  size_t len = s.length();
+  size_t val = 0;
+  for (int i=0; i<len; i++)
+    val += (size_t)s[i];
+  val %= K_MAX_CLUSTER;
+  return val;
+}
 
 const u_int16_t K_SOCKET_CONSTRUCT_ERROR = 1;
 const uint16_t K_SOCKET_BIND_ERROR = 2;
