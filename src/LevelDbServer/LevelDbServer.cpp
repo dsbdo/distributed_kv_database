@@ -61,7 +61,7 @@ void LevelDbServer::joinCluster()
 
     ip_port join_address(root["chordJoinIP"].asString(),root["chordJoinPort"].asUInt());
     ip_port self_address(getIp(),getPort());
-    m_chordhd1=new chordModuleNS::chordModule(self_address,join_address);//暂时不清楚这个的作用
+    m_chordhd1=new chordModuleNS::chordModule(self_address,join_address);
     //创建一个线程在等待，不过这个有什么用还要看看
     if(pthread_create(&m_chordso._thread_obj_arr[0],//指向线程标识符的指针
                 0,//默认线程属性
@@ -71,7 +71,6 @@ void LevelDbServer::joinCluster()
         throw K_THREAD_ERROR;
 }
 
-//话说为啥要在这里放一个不会死的进程
 void* LevelDbServer::chordInit(void* arg)
 {
     while(true)
@@ -208,19 +207,18 @@ void* LevelDbServer::recvThread(void* arg)
         if(pthread_mutex_lock(&socket_mutex)!=0)
         {
             //::exit(1);
-            throw K_THREAD_ERROR;//有待加上去
+            throw K_THREAD_ERROR;
         }
         //把东西读进buffer里面
-        NO_EINTR(byte_received=read(clfd,buf,K_BUF_SIZE));//comment重启服务的，木明删掉了，似乎不能少，不然buf就没有输入
+        NO_EINTR(byte_received=read(clfd,buf,K_BUF_SIZE));
         //释放锁
         if(pthread_mutex_unlock(&socket_mutex)!=0)
         {
             //::exit(1);
-            throw K_THREAD_ERROR;//有待加上去
+            throw K_THREAD_ERROR;
         }
         if(buf[byte_received-1]=='\0')
             done=true;
-        //buf似乎一直是0,没有输入的样子
         request=request+std::string(buf);
     }
 
@@ -231,20 +229,20 @@ void* LevelDbServer::recvThread(void* arg)
     if(pthread_mutex_lock(&cv_mutex)!=0)
     {
         //::exit(1);
-        throw K_THREAD_ERROR;//有待加上去
+        throw K_THREAD_ERROR;
     }
     *ackmsg=response;
     if(pthread_mutex_unlock(&cv_mutex)!=0)
     {
         //::exit(1);
-        throw K_THREAD_ERROR;//有待加上去
+        throw K_THREAD_ERROR;
     }
 
     //发送信号给另一个正在处于阻塞状态的线程，使它脱离阻塞状态继续执行
     if(pthread_cond_signal(&cv)!=0)
     {
         //::exit(1);
-        throw K_THREAD_ERROR;//有待加上去
+        throw K_THREAD_ERROR;
     }
     return 0;
 }
@@ -263,14 +261,14 @@ void* LevelDbServer::sendThread(void* arg)
     if (pthread_mutex_lock(&cv_mutex)!=0)
     {
         //::exit(1);
-        throw K_THREAD_ERROR;//有待加上去
+        throw K_THREAD_ERROR;
     }
     while(response_str.empty())
         pthread_cond_wait(&cv,&cv_mutex);
     if (pthread_mutex_unlock(&cv_mutex)!=0)
     {
         //::exit(1);
-        throw K_THREAD_ERROR;//有待加上去
+        throw K_THREAD_ERROR;
     }
 
     const char* response=response_str.c_str();
@@ -283,13 +281,13 @@ void* LevelDbServer::sendThread(void* arg)
         if (pthread_mutex_lock(&socket_mutex)!=0)
         {
             //::exit(1);
-            throw K_THREAD_ERROR;//有待加上去
+            throw K_THREAD_ERROR;
         }
-        NO_EINTR(byte_sent = write(clfd,response,response_msg_size));//要补的
+        NO_EINTR(byte_sent = write(clfd,response,response_msg_size));
         if (pthread_mutex_unlock(&socket_mutex)!=0)
         {
             //::exit(1);
-            throw K_THREAD_ERROR;//有待加上去
+            throw K_THREAD_ERROR;
         }
 
         if(byte_sent<0)
