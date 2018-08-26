@@ -24,6 +24,9 @@
 //用以获取本机ip port 信息
 #include <ifaddrs.h>
 
+//与系统信号相关的头文件
+#include <signal.h>
+
 const u_int16_t K_SOCKET_CONSTRUCT_ERROR = 1;
 const uint16_t K_SOCKET_BIND_ERROR = 2;
 const uint16_t K_SOCKET_LISTEN_ERROR = 4;
@@ -33,7 +36,9 @@ const u_int16_t K_SOCKET_CLOSE_ERROR = 8;
 const uint16_t K_THREAD_ERROR = 11;
 const uint16_t K_FILE_IO_ERROR = 7;
 const int K_BUF_SIZE = 99999;
-
+const uint K_MAX_CLUSTER = 16;
 
 const uint16_t K_MAX_CONNECT = 5;
+//每十秒发送一个心跳包
+const uint16_t K_HEARTBEAT_RATE = 10;
 #endif
