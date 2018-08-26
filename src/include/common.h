@@ -46,7 +46,7 @@ const uint16_t K_SOCKET_ACCEPT_ERROR = 5;
 const u_int16_t K_SOCKET_CLOSE_ERROR = 8;
 
 const uint16_t K_THREAD_ERROR = 11;
-const uint16_t K_DB_FAIL 12;
+const uint16_t K_DB_FAIL = 12;
 const uint16_t K_FILE_IO_ERROR = 7;
 const int K_BUF_SIZE = 99999;
 const uint K_MAX_CLUSTER = 16;
