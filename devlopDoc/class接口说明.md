@@ -14,3 +14,10 @@
 5. ser->getIP() 获取该server设定的ip
 6. ser->getServerName() 获取server所在机器的机器名称
 7. ser->getSocketFd() 获取套接字文件描述符
+
+## LevelDbServer 接口说明
+1. 该类用来把本服务器加入一个集群服务器，如果不明确指定集群服务器的ip和端口则默认将自身作为一个集群服务器
+2. LevelDbServer* ls=new LevelDbServer(cluster_port,self_port,cluster_ip,self_ip,database_diretion);
+3. int confd=ls->acceptConnect(); 文件描述符，用来获取请求内容
+3. ls->requestHandle(clfd); 处理请求
+4. delete ls;

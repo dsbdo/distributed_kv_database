@@ -1,6 +1,7 @@
 #ifndef _SERVER_H_
 #define _SERVER_H_
 #include "common.h"
+#include "Communicate/Communicate.h"
 typedef std::pair<std::string, uint16_t> ip_port;
 class Server {
 public:
