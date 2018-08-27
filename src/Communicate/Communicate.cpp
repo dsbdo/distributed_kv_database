@@ -192,7 +192,7 @@ void *Communicate::recv_thread(void *arg)
     char buf[K_BUF_SIZE];
     ssize_t byte_read = -1;
     std::vector<void *> arg_content = *(std::vector<void *> *)arg;
-    std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
+    //std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
     int sock_fd = *(int *)arg_content[1];
     std::cout << "sock_fd is: " << sock_fd << std::endl;
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
@@ -203,7 +203,7 @@ void *Communicate::recv_thread(void *arg)
     {
         memset(buf, 0, K_BUF_SIZE);
         byte_read = read(sock_fd, buf, K_BUF_SIZE);
-        //这里的byte_read 感觉相当危险，容易数组越界，而且不一定有访问啊
+        //这里的byte_read 感觉相当危险，容易数组越界，如果没有回复，该线程阻塞
         if (buf[byte_read] == '\0')
         {
             done = true;
