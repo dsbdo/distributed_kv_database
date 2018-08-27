@@ -78,7 +78,6 @@ int Server::acceptConnect()
 {
     try
     {
-
         //：accept函数由TCP服务器调用，用于从完成连接队列头返回下一个已完成连接。如果已完成连接队列为空，那么进程被投入睡眠（假定套接字为默认的阻塞方式）。
         sockaddr_in client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
@@ -99,22 +98,22 @@ int Server::acceptConnect()
         //打印信息，同时返回消息$$$$$$$$
         printf("received a connection from %s:%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
         //打印发送的请求
-        char temp_buf[1024];
-        int recvbytes = 0;
-        if ((recvbytes = recv(comm_socket_fd, temp_buf, 1024, 0)) == -1)
-        {
-            perror("recv出错！");
-            return 0;
-        }
-        temp_buf[recvbytes] = '\0';
-        printf("Received: %s", temp_buf);
+    //     char temp_buf[1024];
+    //     int recvbytes = 0;
+    //     if ((recvbytes = recv(comm_socket_fd, temp_buf, 1024, 0)) == -1)
+    //     {
+    //         perror("recv出错！");
+    //         return 0;
+    //     }
+    //     temp_buf[recvbytes] = '\0';
+    //     printf("Received: %s", temp_buf);
 
-        //响应客户端
-        if (send(comm_socket_fd, "Hello, you are connected!\n", 26, 0) == -1)
-        {
-            perror("send出错！");
-        }
-        close(comm_socket_fd);
+    //     //响应客户端
+    //     if (send(comm_socket_fd, "Hello, you are connected!\n", 26, 0) == -1)
+    //     {
+    //         perror("send出错！");
+    //     }
+    //    // close(comm_socket_fd);
         //打印处理结束 $$$$$$$
         client_host_info = gethostbyaddr((const char *)&client_addr.sin_addr.s_addr, sizeof(client_addr.sin_addr.s_addr), AF_INET);
         if (client_host_info == NULL)
@@ -133,9 +132,12 @@ int Server::acceptConnect()
         {
             std::cout << "\033[32m server established connection with: " << client_host_info->h_name << " " << client_host_addr_p << "\033[0m" << std::endl;
         }
+        //返回socket 的文件描述符
+        return comm_socket_fd;
     }
     catch (int e)
     {
+        throw;
     }
 }
 

@@ -46,7 +46,7 @@ private:
     pthread_t m_thread_obj;
 
     //维护集群服务器的数据结构
-    std::vector<std::vector<ip_port>> m_cluster_table_leveldb; //集群服务器表， 记录各个集群中的所有信息
+    std::vector<std::vector<ip_port> > m_cluster_table_leveldb; //集群服务器表， 记录各个集群中的所有信息
     ClusterMinHeap m_cluster_min_heap;
     std::map<ip_port, uint16_t> m_leveldb_2_cluster_map;
     std::map<ip_port, bool> m_existing_cs_set;
@@ -71,7 +71,9 @@ private:
     void updateClusterState(const Json::Value& root);
 
     static void heartbeatHandler(int sign_num);
-
+    static void _heartbeatClusterServerErrHandle(void* arg);
+    static void _heartbeatLeveldbServerErrHandle(void* arg);
+    static void _newMasterResponseHandle(void* arg);
 public:
     bool m_is_master;
     bool m_get_heartbeat_msg;

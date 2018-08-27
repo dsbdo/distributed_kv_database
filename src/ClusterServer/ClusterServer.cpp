@@ -1,7 +1,7 @@
 #include "ClusterServer.h"
 
-
 ClusterServer *cluster_server_obj;
+
 ClusterServer::ClusterServer(const char *ip, const uint16_t port, bool is_master)
     : Server(ip, port),
       m_cluster_table_leveldb(K_MAX_CLUSTER),
@@ -9,12 +9,15 @@ ClusterServer::ClusterServer(const char *ip, const uint16_t port, bool is_master
       m_get_heartbeat_msg(false),
       m_new_master_ongoing(false)
 {
+    cluster_server_obj = this; //不是很明白搞这个有啥用，直接用this不好吗
     //启动集群服务器
     std::cout << "启动集群服务器，Ip地址是： " << ip << " 端口是 port: " << port << std::endl;
     //初始化锁变量
     pthread_mutex_init(&m_index_lock, NULL);
     //初始化集群中集群服务器相关信息,标明该服务器本身已经存在集群服务器中
     m_existing_cs_set.insert(std::pair<ip_port, bool>(ip_port(getIp(), getPort()), true));
+
+    //初始化堆栈
 
     //将当前时间记录到m_timestamp
     time(&m_timestamp);
@@ -27,6 +30,7 @@ ClusterServer::ClusterServer(const char *ip, const uint16_t port, bool is_master
     //如果信号发送中断了某部分阻塞型的系统调用，在这里信号到来前的系统调用。
     siginterrupt(SIGALRM, 0);
 }
+
 ClusterServer::~ClusterServer()
 {
     ip_port dummy;
@@ -237,10 +241,11 @@ void ClusterServer::newMasterResponseHandle(std::string response_msg)
     }
 }
 
-//接下来是private 中的内容了，第一个堆的管理
+//接下来是private 中的内容了，第一个堆的管理,这个是一个构造函数
 ClusterServer::ClusterMinHeap::ClusterMinHeap()
 {
-    cluster_id_size cis;
+    std::cout << "min heap has been created" << std::endl;
+     cluster_id_size cis;
     //heap.push_back(cis);
     //初始化堆
     for (int i = 0; i < K_MAX_CLUSTER; i++)
@@ -251,6 +256,7 @@ ClusterServer::ClusterMinHeap::ClusterMinHeap()
         cluster_heap_idx.push_back(i);
     }
 }
+
 void ClusterServer::ClusterMinHeap::changeSize(uint16_t cluster_id, uint16_t new_cluster_size)
 {
     //第一，找到集群服务器信息在堆里面的索引
@@ -327,6 +333,8 @@ uint16_t ClusterServer::ClusterMinHeap::getMinClusterId()
     return heap[0].first;
 }
 
+
+//线程测试完成，未发现问题
 //堆管理结束
 void *ClusterServer::main_thread(void *arg)
 {
@@ -369,7 +377,7 @@ void *ClusterServer::main_thread(void *arg)
     return 0;
 }
 
-//发送线程， 未完全明白？？？？
+//发送线程
 void *ClusterServer::send_thread(void *arg)
 {
     std::vector<void *> &argv = *(std::vector<void *> *)arg;
@@ -404,7 +412,8 @@ void *ClusterServer::send_thread(void *arg)
             throw K_THREAD_ERROR;
         }
         //检查是否有发生错误,如果发送失败，则自动重发
-        NO_EINTR(byte_send = write(clfd, response, remind_len));
+        //NO_EINTR(byte_send = write(clfd, response, remind_len));
+        byte_send = write(clfd, response, remind_len);
         if (pthread_mutex_unlock(&socket_mutex) != 0)
         {
             throw K_THREAD_ERROR;
@@ -416,6 +425,7 @@ void *ClusterServer::send_thread(void *arg)
         remind_len -= byte_send;
         resp_len += byte_send;
     }
+    //关闭该tcp连接
     if (close(clfd) < 0)
     {
         throw K_SOCKET_CLOSE_ERROR;
@@ -444,17 +454,21 @@ void *ClusterServer::recv_thread(void *arg)
         {
             throw K_THREAD_ERROR;
         }
-        NO_EINTR(byte_received = read(clfd, buf, K_BUF_SIZE));
+        //这里是处理接受的内容
+        //NO_EINTR(byte_received = read(clfd, buf, K_BUF_SIZE));
+        byte_received = read(clfd, buf, K_BUF_SIZE);
+        //这里的byte_read 感觉相当危险，容易数组越界，如果没有回复，该线程阻塞
         if (pthread_mutex_unlock(&socket_mutex) != 0)
         {
             throw K_THREAD_ERROR;
         }
-        if (buf[byte_received - 1] == '\0')
+        if (buf[byte_received] == '\0')
         {
             done = true;
             request = request + std::string(buf);
         }
     }
+    std::cout << request << std::endl;
     std::string response;
     processClusterRequest(request, response, cs);
     if (pthread_mutex_lock(&cv_mutex) != 0)
@@ -467,7 +481,7 @@ void *ClusterServer::recv_thread(void *arg)
     {
         throw K_THREAD_ERROR;
     }
-
+    //在这里唤醒发送线程
     if (pthread_cond_signal(&cv) != 0)
     {
         throw K_THREAD_ERROR;
@@ -475,8 +489,10 @@ void *ClusterServer::recv_thread(void *arg)
 
     return 0;
 }
+//线程测试完成， 未发现问题
 
-//请求处理.处理结果的信息放在reponse 中
+
+//请求处理.处理结果的信息放在reponse 中，由接受进程进行调用分析，这个一般不会有问题
 void ClusterServer::processClusterRequest(std::string request, std::string &response, ClusterServer *cs)
 {
     Json::Value root;
@@ -582,7 +598,7 @@ void ClusterServer::processClusterRequest(std::string request, std::string &resp
     else if (req_type == "broadcast_update_cluster_state")
     {
         time_t remote_ts = static_cast<time_t>(root["req_args"]["timestamp"].asDouble());
-        if (pthread_mutex_lock(&cs->m_index_lock)!= 0)
+        if (pthread_mutex_lock(&cs->m_index_lock) != 0)
         {
             throw K_THREAD_ERROR;
         }
@@ -737,15 +753,17 @@ void ClusterServer::broadcast(const ip_port &exclude, const Json::Value &msg, vo
     }
 }
 
-
-void ClusterServer::updateClusterState(const Json::Value& root) {
-    std::cout << "\033[32m update cluster state\033[0m" <<std::endl;
+void ClusterServer::updateClusterState(const Json::Value &root)
+{
+    std::cout << "\033[32m update cluster state\033[0m" << std::endl;
     int i = 0;
-    for(Json::Value::const_iterator itr1 = root["ctbl"].begin(); itr1 != root["ctbl"].end(); itr1++) {
-        const Json::Value& vec = *itr1;
+    for (Json::Value::const_iterator itr1 = root["ctbl"].begin(); itr1 != root["ctbl"].end(); itr1++)
+    {
+        const Json::Value &vec = *itr1;
         m_cluster_table_leveldb[i].clear();
-        for(Json::Value::const_iterator itr2 = vec.begin(); itr2 != vec.end(); itr2++) {
-            m_cluster_table_leveldb[i].push_back( ip_port( (*itr2)["ip"].asString(), (*itr2)["port"].asUInt() ) );
+        for (Json::Value::const_iterator itr2 = vec.begin(); itr2 != vec.end(); itr2++)
+        {
+            m_cluster_table_leveldb[i].push_back(ip_port((*itr2)["ip"].asString(), (*itr2)["port"].asUInt()));
         }
         i++;
     }
@@ -753,31 +771,42 @@ void ClusterServer::updateClusterState(const Json::Value& root) {
     m_cluster_min_heap.heap.clear();
     //m_cluster_min_heap.heap.push_back(cluster_id_size());
     m_cluster_min_heap.cluster_heap_idx.clear();
-    for(Json::Value::const_iterator itr1 = root["cmh"]["heap"].begin(); itr1 != root["cmh"]["heap"].end();itr1++) {
+    for (Json::Value::const_iterator itr1 = root["cmh"]["heap"].begin(); itr1 != root["cmh"]["heap"].end(); itr1++)
+    {
         m_cluster_min_heap.heap.push_back(cluster_id_size((*itr1)["cluster_id"].asUInt(), (*itr1)["cluster_sz"].asUInt()));
     }
-    const Json::Value& cluster_index_ref = root["cmh"]["cluster_heap_idx"];
+    const Json::Value &cluster_index_ref = root["cmh"]["cluster_heap_idx"];
     int cluster_index_ref_size = cluster_index_ref.size();
-    for(int i =0; i < cluster_index_ref_size; i++) {
+    for (int i = 0; i < cluster_index_ref_size; i++)
+    {
         m_cluster_min_heap.cluster_heap_idx.push_back(cluster_index_ref[i].asUInt());
     }
     //更新leveldb_cluster_map
     m_leveldb_2_cluster_map.clear();
-    for(Json::Value::const_iterator itr1= root["ldbsvr_cluster_map"].begin();itr1 != root["ldbsvr_cluster_map"].end();itr1++) {
-        m_leveldb_2_cluster_map.insert(std::pair<ip_port, uint16_t>(ip_port((*itr1)["ip"].asString(), (*itr1)["port"].asUInt()), (*itr1)["cluster_id"].asUInt());
+    for (Json::Value::const_iterator itr1 = root["ldbsvr_cluster_map"].begin(); itr1 != root["ldbsvr_cluster_map"].end(); itr1++)
+    {
+        m_leveldb_2_cluster_map.insert(
+            std::pair<ip_port, uint16_t>(
+                ip_port(
+                    (*itr1)["ip"].asString(), (*itr1)["port"].asUInt()),
+                (*itr1)["cluster_id"].asUInt()));
     }
     //更新存在的集群服务器列表
     m_existing_cs_set.clear();
-    for(Json::Value::const_iterator itr1 = root["existing_cs_set"].begin(); itr1 != root["existing_cs_set"].end();itr1++) {
-         m_existing_cs_set.insert( std::pair<ip_port, bool>(ip_port((*itr1)["ip"].asString(),(*itr1)["port"].asUInt()),true));
+    for (Json::Value::const_iterator itr1 = root["existing_cs_set"].begin(); itr1 != root["existing_cs_set"].end(); itr1++)
+    {
+        m_existing_cs_set.insert(std::pair<ip_port, bool>(ip_port((*itr1)["ip"].asString(), (*itr1)["port"].asUInt()), true));
     }
     m_timestamp = static_cast<time_t>(root["timestamp"].asDouble());
-
 }
-void ClusterServer::heartbeatHandler(int sign_num) {
-    if(sign_num == SIGALRM) {
-        //需要注意,注意注意
-        if(cluster_server_obj->m_is_master){
+
+void ClusterServer::heartbeatHandler(int sign_num)
+{
+    if (sign_num == SIGALRM)
+    {
+        //需要注意,注意注意,这里容易段错误！！！！！！！！！！！！
+        if (cluster_server_obj->m_is_master)
+        {
             //当前节点是主节点
             std::cout << "\033[32m will send heart \033[0m" << std::endl;
             Json::Value heart_beat_msg;
@@ -785,59 +814,69 @@ void ClusterServer::heartbeatHandler(int sign_num) {
             //将心跳包发给所有的levelDB
             std::map<ip_port, uint16_t>::iterator leveldb_itr = cluster_server_obj->m_leveldb_2_cluster_map.begin();
             std::map<ip_port, uint16_t>::iterator leveldb_itr_end = cluster_server_obj->m_leveldb_2_cluster_map.end();
-            std::vector<ip_port>leveldb_set;
-            while(leveldb_itr != leveldb_itr_end) {
+            std::vector<ip_port> leveldb_set;
+            while (leveldb_itr != leveldb_itr_end)
+            {
                 leveldb_set.push_back(leveldb_itr->first);
                 leveldb_itr++;
             }
             //向所有levelDB 服务器发出广播
-            cluster_server_obj->broadcast(leveldb_set, heart_beat_msg,_heartbeatLeveldbServerErrHandle);
+            cluster_server_obj->broadcast(leveldb_set, heart_beat_msg, _heartbeatLeveldbServerErrHandle);
 
             //向所有集群服务器发送心跳包
             ip_port dummy;
             cluster_server_obj->broadcast(dummy, heart_beat_msg, _heartbeatClusterServerErrHandle);
-            if(errno) {
+            if (errno)
+            {
                 time(&cluster_server_obj->m_timestamp);
                 ip_port dummy_exclude;
                 cluster_server_obj->broadcastUpdateClusterState(dummy_exclude);
             }
-
         }
-        else {
+        else
+        {
             //不是masster 节点
-            if(cluster_server_obj->m_get_heartbeat_msg) {
+            if (cluster_server_obj->m_get_heartbeat_msg)
+            {
                 cluster_server_obj->m_get_heartbeat_msg = false;
             }
-            else {
+            else
+            {
                 //假设主节点已死，自己自动申请为master 节点
                 std::cout << "\033[31m Not received heart msg, assume to be master dead \033[0m" << std::endl;
                 Json::Value new_master;
                 new_master["req_type"] = "newmaster";
                 ip_port dummy;
                 cluster_server_obj->broadcast(dummy, new_master, _heartbeatClusterServerErrHandle, _newMasterResponseHandle);
-                cluster_server_obj->m_new_master_ongoing  = false;
+                cluster_server_obj->m_new_master_ongoing = false;
             }
         }
         alarm(K_HEARTBEAT_RATE);
     }
 }
 
-void _heartbeatClusterServerErrHandle(void* arg) {
-    if(!arg){
-        return ;
+void ClusterServer::_heartbeatClusterServerErrHandle(void *arg)
+{
+    if (!arg)
+    {
+        return;
     }
     cluster_server_obj->heartBeatClusterServerErrHandle(*(ip_port *)arg);
 }
-void _heartbeatLeveldbServerErrHandle(void* arg) {
-    if(!arg) {
-        return ;
-    }
-    cluster_server_obj->heartBeatLeveldbServerErrHandle(*(ip_port*)arg);
-}
-
-void _newMasterResponseHandle(void* arg) {
-    if(!arg) {
+void ClusterServer::_heartbeatLeveldbServerErrHandle(void *arg)
+{
+    if (!arg)
+    {
         return;
     }
-    cluster_server_obj->newMasterResponseHandle(*(std::string* )arg);
+    cluster_server_obj->heartBeatLeveldbServerErrHandle(*(ip_port *)arg);
+}
+
+void ClusterServer::_newMasterResponseHandle(void *arg)
+{
+    if (!arg)
+    {
+        return;
+    }
+    cluster_server_obj->newMasterResponseHandle(*(std::string *)arg);
 }
