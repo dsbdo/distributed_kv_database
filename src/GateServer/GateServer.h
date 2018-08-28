@@ -1,7 +1,7 @@
 #ifndef _GATESERVER_H_
 #define _GATESERVER_H_
 
-#include "include/common.h"
+#include "common.h"
 #include "ThreadVar/ThreadVar.h"
 #include "Server/Server.h"
 #include "Communicate/Communicate.h"
