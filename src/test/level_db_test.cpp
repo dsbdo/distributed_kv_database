@@ -16,7 +16,6 @@ void printusage()
 {
       cout<<"./leveldbserver.out [--clusterport] [--selfport] "<<
                 "[--clusterip] [--selfip] [--dbdir]"<<endl;
-
 }
 
 int main(int argc,char** argv)

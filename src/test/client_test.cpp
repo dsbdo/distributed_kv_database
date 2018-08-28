@@ -16,6 +16,7 @@ int main(int argc, char** argv)
     cout<<"client test"<<endl;
     Json::Value root;
     root["req_type"] = "put";
+    root["req_args"]["cluster_id"] = 0;
     root["req_args"]["key"] = "ly232";
     root["req_args"]["value"] = "Lin Yang";
     root["sync"] = "true"; //tell server to ensure consistency before ack
@@ -25,6 +26,8 @@ int main(int argc, char** argv)
     std::string outputConfig = writer.write(root);
 
     Communicate comm(argv[1], atoi(argv[2]));
+    using namespace std;
+    cout << "send string is: " << outputConfig.c_str() << endl;
     std::string reply = comm.sendString(outputConfig.c_str());
     std::cout<<"reply="<<reply<<std::endl;
 
@@ -44,6 +47,7 @@ int main(int argc, char** argv)
 
     root.clear();
     root["req_type"] = "get";
+
     root["req_args"]["key"] = "ly232";
     outputConfig = writer.write(root);
     reply = comm.sendString(outputConfig.c_str());

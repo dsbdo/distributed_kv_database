@@ -14,13 +14,16 @@ void *GateServer::cluster_server_init(void *arg)
         gs->cs->requestHandle(clfd);
     }
 }
+
 GateServer::GateServer(const uint16_t gsport,
                        const uint16_t csport,
                        const char *ip,
                        bool master):Server(ip, gsport), sync_client(false){
-//启动集群管理器监听levelDB的加入和离开
+    //启动集群管理器监听levelDB的加入和离开
     cs = new ClusterServer(getIp().c_str(), csport, master);
     std::cout << "\033[32mDEBUG::GateServer Init: ip is" << getIp() << " port is: " << getPort() << "\033[0m"<< std::endl;  
+
+    //开启集群服务器的线程，等待外界连接
     if(pthread_create(cs->getThreadObj(), 0, &cluster_server_init, (void*)this)!= 0) {
         throw K_THREAD_ERROR;
     }
@@ -151,21 +154,22 @@ void* GateServer::recv_thread(void* arg) {
     return 0;
   }
   //请求同步
- std::string sync = root["sync"].asString();
+  std::string sync = root["sync"].asString();
+  //是否为同步更新
   (sync == "true") ? gatesvr->setsync() : gatesvr->setasync();
-  // 挑选一个levelDB 去转发请求
-  //现在gateServer作为一个客户端去跟levelDB服务器交互
-  //char ldbsvrip[INET_ADDRSTRLEN] = "192.168.75.164";
-  //const uint16_t ldbsvrport = 8888;
+  // 挑选一个levelDB 去转发请求, 现在gateServer作为一个客户端去跟levelDB服务器交互
   std::string key = root["req_args"]["key"].asString();
   bool skip = false;
   std::string ldback;
-  size_t cluster_id = hash(key);
-  //std::cout<<"clusterid="<<cluster_id<<std::endl;
+  //为什么会没有回复，因为他根本就没有找到levelDB的地址去发
+  //size_t cluster_id = hash(key);//为何要哈希取值呢
+  //通过增加字段来通过调试
+  size_t cluster_id = root["req_args"]["cluster_id"].asInt();
+
+  std::cout << "\033[32mDEBUG::GateServer::target cluster id is: " << cluster_id << "\033[0m" << std::endl;
   std::vector<ip_port>* svrlst =
       gatesvr->cs->getServerList(cluster_id);
   std::vector<ip_port>::iterator itr = svrlst->begin();
-  //std::cout<<"svrlst.size()="<<svrlst.size()<<std::endl;
   if (gatesvr->sync_client)
   {
     while (itr != svrlst->end())
