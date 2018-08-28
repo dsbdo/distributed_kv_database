@@ -29,7 +29,7 @@ class GateServer : public Server
         static void *cluster_server_Init(void*); //用于初始化相对应的cluster
         static void *clean_thread(void*); //用于清楚所有线程
         ClusterServer *cs; //???
-        bool sysc_client;
+        bool sync_client;
 
 
 

@@ -238,7 +238,7 @@ void* GateServer::rec_thread(void* arg)
     }
 
     std::string sync = root["sync"].asString();
-    (sync=="true")?GateServer->setsync():GateServer->setasync();
+    (sync=="true")?gateserver->setsync():gateserver->setasync();
     // 根据通讯报文中的req_type key字段中的内容去hash出对应的cluster id然后再广播给这个集群中的server
     // 
     //char ldbsvrip[INET_ADDRSTRLEN] = "192.168.75.164";
@@ -249,11 +249,11 @@ void* GateServer::rec_thread(void* arg)
    // size_t cluster_id = hash(key);
     //std::cout<<"clusterid="<<cluster_id<<std::endl;
     std::vector<ip_port >& svrlst = 
-        GateServer->cs->getServerList(cluster_id);
+        gateserver->cs->getServerList(cluster_id);
     std::vector<ip_port >::iterator itr 
         = svrlst.begin();
     //std::cout<<"svrlst.size()="<<svrlst.size()<<std::endl;
-    if (GateServer->sync_client)
+    if (gateserver->sync_client)
     {
     while(itr!=svrlst.end())
     {
@@ -315,11 +315,11 @@ void* GateServer::rec_thread(void* arg)
             client_vec->push_back(clt);
         }
         //for eventual consistency, we wait for at least one ack.
-        if (pthread_mutex_lock(&cso->_mutex_arr[0])) 
+        if (pthread_mutex_lock(&cso->m_mutex_arr[0])) 
             throw K_THREAD_ERROR;
         while(!(*numdone))
-            pthread_cond_wait(&cso->_cv_arr[0], &cso->_mutex_arr[0]);
-        if (pthread_mutex_unlock(&cso->_mutex_arr[0])) throw K_THREAD_ERROR;
+            pthread_cond_wait(&cso->m_cv_arr[0], &cso->m_mutex_arr[0]);
+        if (pthread_mutex_unlock(&cso->m_mutex_arr[0])) throw K_THREAD_ERROR;
         //delete cso;
         std::vector<void*>* cleanarg = new std::vector<void*>;
         cleanarg->push_back((void*)cso);
@@ -330,7 +330,7 @@ void* GateServer::rec_thread(void* arg)
         cleanarg->push_back((void*)ldback_vec);
         pthread_t cleanup_thread; //clean up numdone in background
         if (pthread_create(&cleanup_thread, 
-            0, &cleanup_thread_handler, (void*)cleanarg))
+            0, &clean_thread, (void*)cleanarg))
             throw K_THREAD_ERROR;
 
         int ldbacksz = ldback_vec->size();
@@ -354,7 +354,7 @@ void* GateServer::rec_thread(void* arg)
     return 0;
 }
 
-void* GateServer::cleanup_thread(void* arg)
+void* GateServer::clean_thread(void* arg)
 {
   std::vector<void*>* cleanarg = (std::vector<void*>*)arg;
   ThreadVar* cso = (ThreadVar*)((*cleanarg)[0]);
@@ -386,9 +386,9 @@ void* GateServer::cleanup_thread(void* arg)
 
 }
 
-void GateServer::join_cluster(std::string& joinip, uint16_t joinport)
+void GateServer::joinCluster(std::string& joinip, uint16_t joinport)
 {
-  cs->join_cluster(joinip, joinport);
+  cs->joinCluster(joinip, joinport);
 }
 
 
