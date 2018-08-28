@@ -25,7 +25,7 @@ int main(int argc, char **argv)
         if(clfd < 0) {
             throw K_SOCKET_ACCEPT_ERROR;
         }
-        cs->requestHandler(clfd);
+        cs->requestHandle(clfd);
     }
     //先试一下加入集群服务器的函数看看表现正常不正常
     return 0;

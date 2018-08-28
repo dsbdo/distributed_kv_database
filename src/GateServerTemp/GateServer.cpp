@@ -1,4 +1,4 @@
-#include "GateServerTemp.h"
+#include "GateServer.h"
 
 void *GateServer::cluster_server_init(void *arg)
 {
@@ -11,7 +11,7 @@ void *GateServer::cluster_server_init(void *arg)
         {
             throw K_SOCKET_ACCEPT_ERROR;
         }
-        gs->cs->requestHandler(clfd);
+        gs->cs->requestHandle(clfd);
     }
 }
 GateServer::GateServer(const uint16_t gsport,
@@ -19,7 +19,8 @@ GateServer::GateServer(const uint16_t gsport,
                        const char *ip,
                        bool master):Server(ip, gsport), sync_client(false){
 //启动集群管理器监听levelDB的加入和离开
-    cs = new ClusterServer(getIp().c_str(), getPort(), master);
+    cs = new ClusterServer(getIp().c_str(), csport, master);
+    std::cout << "\033[32mDEBUG::GateServer Init: ip is" << getIp() << " port is: " << getPort() << "\033[0m"<< std::endl;  
     if(pthread_create(cs->getThreadObj(), 0, &cluster_server_init, (void*)this)!= 0) {
         throw K_THREAD_ERROR;
     }
@@ -263,7 +264,7 @@ void* GateServer::recv_thread(void* arg) {
     }
 
     if (pthread_cond_signal(&cv) != 0)
-      throw THREAD_ERROR;
+      throw K_THREAD_ERROR;
   }
   return 0;
 
@@ -341,4 +342,20 @@ void *GateServer::cleanup_thread_handler(void *arg)
 void GateServer::join_cluster(std::string &joinip, uint16_t joinport)
 {
   cs->joinCluster(joinip, joinport);
+}
+
+void GateServer::requestHandle(int clfd)
+{
+  pthread_t main_thread_obj;
+  int *clfdptr = new int; //will be deleted by main thread
+  *clfdptr = clfd;
+  std::vector<void *> *argv = new std::vector<void *>;
+  //argv will be deleted by main thread
+  argv->push_back((void *)clfdptr);
+  argv->push_back((void *)this);
+  if (pthread_create(&main_thread_obj,
+                     0,
+                     &main_thread,
+                     (void *)argv) != 0)
+    throw K_THREAD_ERROR;
 }

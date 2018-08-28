@@ -1,30 +1,64 @@
-#include <iostream>
-#include <cstdlib>
+//cltst.cpp
+//cltst.cpp
+//client program
 #include "Communicate/Communicate.h"
-#include "Server/Server.h"
+#include <jsoncpp/json/json.h>
 using namespace std;
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-
-    int port = atoi(argv[1]);
-    cout << port << endl;
-    Communicate *comm = new Communicate("127.0.0.1", 8001);
-    //自己开一个监听端口
-    Server* server = new Server("127.0.0.1", 9001);
+  if (argc!=3)
+  {
+    printf("usage: c.out <gateway server> <gateway server port>");
+    return 1;
+  }
+  try
+  {
+    cout<<"client test"<<endl;
     Json::Value root;
+    root["req_type"] = "put";
+    root["req_args"]["key"] = "ly232";
+    root["req_args"]["value"] = "Lin Yang";
+    root["sync"] = "true"; //tell server to ensure consistency before ack
+                           //alternatively, if this field is not specified,
+                           //server will be eventually consistent (i.e. default false)
     Json::StyledWriter writer;
-    Json::Reader reader;
-    root["req_type"] = "leveldbserver_join";
-    root["req_args"]["ip"] ="127.0.0.1";
-    root["req_args"]["port"] = 9001;
-    std::string request = writer.write(root);
-    cout << "request str is: " << request << endl;
-    std::string response = comm->sendString(request.c_str());
-    std::cout << "join cluster response: " << response << std::endl;
+    std::string outputConfig = writer.write(root);
+
+    Communicate comm(argv[1], atoi(argv[2]));
+    std::string reply = comm.sendString(outputConfig.c_str());
+    std::cout<<"reply="<<reply<<std::endl;
+
     root.clear();
-    cout << "ack msg is: " << comm->sendString("test in Communicate") << endl;
-    while(true) {
-        server->acceptConnect();
-    }
-    return 0;
+    root["req_type"] = "get";
+    root["req_args"]["key"] = "ly232";
+    outputConfig = writer.write(root);
+    reply = comm.sendString(outputConfig.c_str());
+    std::cout<<"reply="<<reply<<std::endl;
+
+    root.clear();
+    root["req_type"] = "delete";
+    root["req_args"]["key"] = "ly232";
+    outputConfig = writer.write(root);
+    reply = comm.sendString(outputConfig.c_str());
+    std::cout<<"reply="<<reply<<std::endl;
+
+    root.clear();
+    root["req_type"] = "get";
+    root["req_args"]["key"] = "ly232";
+    outputConfig = writer.write(root);
+    reply = comm.sendString(outputConfig.c_str());
+    std::cout<<"reply="<<reply<<std::endl;
+
+    root.clear();
+    root["req_type"] = "exit"; 
+    outputConfig = writer.write(root);
+    reply = comm.sendString(outputConfig.c_str());
+    std::cout<<"reply="<<reply<<std::endl;
+
+  }
+  catch(int e)
+  {
+    cout<<"error code = "<<e<<endl;
+  }
+  return 0;
 }

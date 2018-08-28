@@ -189,13 +189,12 @@ void *Communicate::send_thread(void *arg)
 
 void *Communicate::recv_thread(void *arg)
 {
-    std::cout << "Come in recv thread " << std::endl;
+    std::cout << "\033[34mDEBUG::Communicate Come in recv thread \033[0m" << std::endl;
     char buf[K_BUF_SIZE];
     ssize_t byte_read = -1;
     std::vector<void *> arg_content = *(std::vector<void *> *)arg;
     //std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
     int sock_fd = *(int *)arg_content[1];
-    std::cout << "sock_fd is: " << sock_fd << std::endl;
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
     pthread_mutex_lock(sock_mutex);
     bool done = false;
@@ -203,13 +202,8 @@ void *Communicate::recv_thread(void *arg)
     while (!done)
     {
         memset(buf, 0, K_BUF_SIZE);
-<<<<<<< HEAD
-        byte_read = read(sock_fd, buf, K_BUF_SIZE); //当没有东西进来的时候，会自动阻塞当前线程，让它睡眠
-        //这里的byte_read 感觉相当危险，容易数组越界
-=======
         byte_read = read(sock_fd, buf, K_BUF_SIZE);
         //这里的byte_read 感觉相当危险，容易数组越界，如果没有回复，该线程阻塞
->>>>>>> 4fc3007a5f58e893884c6599506ffd75a5ab457a
         if (buf[byte_read] == '\0')
         {
             
@@ -217,7 +211,6 @@ void *Communicate::recv_thread(void *arg)
            
         }
          *ackmsg += std::string(buf);   //监听sock_fd中的内容，把sock_fd中的内容添加到ack中，这样子每一组send,socket_fd,thread_var,ack就是一起的
-        std::cout << "DEBUG log is: " << buf << std::endl;
     }
     pthread_mutex_unlock(sock_mutex);
 
@@ -225,7 +218,11 @@ void *Communicate::recv_thread(void *arg)
     {
         std::cerr << "\033[31m error waiting for ack errno=" << errno << " \033[0m" << std::endl;
     }
-    std::cout << "leave out the recv thread" << std::endl;  
+    std::cout<<"\033[32mDEBUG::ackmsg is: "<< *ackmsg <<"\033[0m";
+    std::cout << "\033[34mDEBUG::leave out the recv thread \033[0m" << std::endl;  
+    std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
     return 0;
 }
 
@@ -239,7 +236,9 @@ void *Communicate::main_thread(void *arg)
     int *numtotal = (int *)(arg_content[4]);
     std::string *levelDB_back = (std::string *)(arg_content[5]);
 
-    
+    //没有声明条件变量
+    pthread_cond_t &cv = client_thread_var->m_cv_arr[0];
+    pthread_mutex_t &cv_mutex = client_thread_var->m_mutex_arr[0];
 
     *levelDB_back = handle->sendString(req); //this blocks
 

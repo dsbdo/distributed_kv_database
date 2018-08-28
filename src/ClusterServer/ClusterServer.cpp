@@ -11,7 +11,7 @@ ClusterServer::ClusterServer(const char *ip, const uint16_t port, bool is_master
 {
     cluster_server_obj = this; //不是很明白搞这个有啥用，直接用this不好吗
     //启动集群服务器
-    std::cout << "启动集群服务器，Ip地址是： " << ip << " 端口是 port: " << port << std::endl;
+    std::cout << "\033[32mDEBUG::ClusterServer Init ip is: " << ip << " 端口是 port: " << port << "\033[0m"<<std::endl;
     //初始化锁变量
     pthread_mutex_init(&m_index_lock, NULL);
     //初始化集群中集群服务器相关信息,标明该服务器本身已经存在集群服务器中
@@ -42,7 +42,7 @@ ClusterServer::~ClusterServer()
 }
 
 //请求处理，启动主线程
-void ClusterServer::requestHandler(int clfd)
+void ClusterServer::requestHandle(int clfd)
 {
     pthread_t main_thread_obj;
     //这里new 出来的信息内容，均由主线程进行处理

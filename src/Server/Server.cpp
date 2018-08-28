@@ -37,6 +37,15 @@ Server::Server(const char *local_ip, const uint16_t local_port)
                     //仅处理ipv4, 且目前支持本地跑
                     m_server_address.sin_addr = ((sockaddr_in *)ifa->ifa_addr)->sin_addr;
                     is_found_ip = true;
+                    if (bind(m_socket_fd, (sockaddr *)&m_server_address, sizeof(sockaddr_in)) == -1)
+                    {
+                        throw K_SOCKET_BIND_ERROR;
+                    }
+                    //监听端口
+                    if (listen(m_socket_fd, K_MAX_CONNECT) == -1)
+                    {
+                        throw K_SOCKET_LISTEN_ERROR;
+                    }
                     break;
                 }
             }
@@ -98,22 +107,22 @@ int Server::acceptConnect()
         //打印信息，同时返回消息$$$$$$$$
         printf("received a connection from %s:%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
         //打印发送的请求
-    //     char temp_buf[1024];
-    //     int recvbytes = 0;
-    //     if ((recvbytes = recv(comm_socket_fd, temp_buf, 1024, 0)) == -1)
-    //     {
-    //         perror("recv出错！");
-    //         return 0;
-    //     }
-    //     temp_buf[recvbytes] = '\0';
-    //     printf("Received: %s", temp_buf);
+        //     char temp_buf[1024];
+        //     int recvbytes = 0;
+        //     if ((recvbytes = recv(comm_socket_fd, temp_buf, 1024, 0)) == -1)
+        //     {
+        //         perror("recv出错！");
+        //         return 0;
+        //     }
+        //     temp_buf[recvbytes] = '\0';
+        //     printf("Received: %s", temp_buf);
 
-    //     //响应客户端
-    //     if (send(comm_socket_fd, "Hello, you are connected!\n", 26, 0) == -1)
-    //     {
-    //         perror("send出错！");
-    //     }
-    //    // close(comm_socket_fd);
+        //     //响应客户端
+        //     if (send(comm_socket_fd, "Hello, you are connected!\n", 26, 0) == -1)
+        //     {
+        //         perror("send出错！");
+        //     }
+        //    // close(comm_socket_fd);
         //打印处理结束 $$$$$$$
         client_host_info = gethostbyaddr((const char *)&client_addr.sin_addr.s_addr, sizeof(client_addr.sin_addr.s_addr), AF_INET);
         if (client_host_info == NULL)

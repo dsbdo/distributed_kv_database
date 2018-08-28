@@ -10,9 +10,9 @@ typedef std::pair<uint16_t, uint16_t> cluster_id_size;
 
 class ClusterServer : public Server{
 public:
-    //负责发送心跳包的就是master 节点
+    //负责发送心跳包的就是master 节点,虚函数是用来让基类指针可以指向之类， 函数纯虚函数标明基类不实现该函数，由子类实现
     ClusterServer(const char* ip, const uint16_t port,  bool master = false);
-    virtual void requestHandler(int cluster_fd);
+    virtual void requestHandle(int cluster_fd) ;
     virtual ~ClusterServer();
     //获取线程对象
      pthread_t* getThreadObj();

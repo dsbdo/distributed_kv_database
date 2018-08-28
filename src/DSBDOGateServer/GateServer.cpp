@@ -12,7 +12,7 @@ void* GateServer::cluster_server_Init(void* arg)   //传入的参数是一个Gat
         int fd_client = gs->cs->acceptConnect(); //返回值是另外开通的fd用来通讯的为listen的fd中的队列中的client
         if(fd_client < 0)
             throw K_SOCKET_ACCEPT_ERROR ; //开通通讯socket失败
-        gs->cs->requestHandler(fd_client) ; //交付cs进行监听，接受，发送处理
+        gs->cs->requestHandle(fd_client) ; //交付cs进行监听，接受，发送处理
     }
 }
 
@@ -26,7 +26,7 @@ GateServer::GateServer(const uint16_t port_gs,  //作为gateserver的端口号
     //初始化一个gateserver作为一个clusterserver部分的功能模块
     cs = new ClusterServer(ip,port_cs,master);
     if(pthread_create(cs->getThreadObj,0,&cluster_server_Init,(void*)this)!= 0)
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
 
 }
 
@@ -132,7 +132,7 @@ void* GateServer::send_thread(void* arg)
 
     //线程等待直到rec_thread完成并且收到ldbserver的回应
      if (pthread_mutex_lock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         while(ackmsg.empty())
             pthread_cond_wait(&cv, &cv_mutex);
      if (pthread_mutex_unlock(&cv_mutex)!=0) 

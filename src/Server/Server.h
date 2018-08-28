@@ -8,7 +8,7 @@ public:
     Server(const char* local_ip, const uint16_t local_port);
     virtual ~Server();
     //纯虚函数
-    //virtual void requestHandle(int clfd) = 0;
+    virtual void requestHandle(int clfd) = 0;
     int acceptConnect();
     uint16_t getPort();
     std::string getIp();

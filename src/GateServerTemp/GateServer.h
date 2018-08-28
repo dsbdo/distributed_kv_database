@@ -11,8 +11,8 @@ public:
 	     const char* ip = NULL,
              bool master = false //master=true iff send heartbeat
             );
-  virtual void requestHandler(int clfd);
-  virtual ~GateServer();
+  virtual void requestHandle(int clfd);
+   ~GateServer();
   void setsync(){sync_client = true;};
   void setasync(){sync_client = false;};
   void join_cluster(std::string& joinip, uint16_t joinport);
