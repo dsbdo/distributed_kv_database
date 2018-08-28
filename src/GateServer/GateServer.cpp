@@ -21,11 +21,11 @@ GateServer::GateServer(const uint16_t port_gs,  //作为gateserver的端口号
                   const uint16_t port_cs, //作为clusterserver的端口号
                   const char* ip, //ip地址，默认为null，可以通过检索网卡自动获取
                   bool master)
-            :Server(port_gs,ip),sysc_client(false)
+            :Server(ip,port_gs),sync_client(false)
 {   
     //初始化一个gateserver作为一个clusterserver部分的功能模块
     cs = new ClusterServer(ip,port_cs,master);
-    if(pthread_create(cs->getThreadObj,0,&cluster_server_Init,(void*)this)!= 0)
+    if(pthread_create(cs->getThreadObj(),0,&cluster_server_Init,(void*)this)!= 0)
         throw K_THREAD_ERROR;
 
 }
@@ -83,12 +83,12 @@ void *GateServer::main_thread(void* arg)  //此部分的arg主要分为两部分
         if (pthread_join(thread_arr->m_thread_obj_arr[1], 0)!=0) //send thread
         throw K_THREAD_ERROR;
         delete ackmsg;
-        delete so;
+        delete thread_arr;
     }
     delete fd_client_ptr;
     delete gateserver_ptr;
     delete client_exit;
-    delete arg;
+    delete argv;
 
     //关闭socket
      if (close(*fd_client_ptr)<0)
@@ -98,7 +98,7 @@ void *GateServer::main_thread(void* arg)  //此部分的arg主要分为两部分
 }
 
 //主要负责把工作分发到main手上，其实可以省略
-void GateServer::requestHandler(int fd_client)
+void GateServer::requestHandle(int fd_client)
 {
     pthread_t main_thread_obj;
     
@@ -117,7 +117,7 @@ void GateServer::requestHandler(int fd_client)
 
 void* GateServer::send_thread(void* arg)
 {
-    std::vector<void*> &argv = *(std::vector<void*>)arg;
+    std::vector<void*> &argv = *(std::vector<void*>*)arg;
     int fd_client  = *(int*)argv[0];
    
     //引用全局的互斥量
@@ -177,16 +177,16 @@ void* GateServer::rec_thread(void* arg)
 
     int byte_received = -1;
     std::string request;
-    char buf[BUF_SIZE];//用于储存接收到的内容
+    char buf[K_BUF_SIZE];//用于储存接收到的内容
     bool done = false;
 
     //把socket中的内容全部读到request中，如果socket中没有内容，则会自动睡眠read线程
     while (!done)
     {
-        memset(buf, 0, BUF_SIZE);
+        memset(buf, 0, K_BUF_SIZE);
         if (pthread_mutex_lock(&socket_mutex)!=0) 
             throw K_THREAD_ERROR;
-        NO_EINTR(byte_received=read(clfd, buf, BUF_SIZE));
+        NO_EINTR(byte_received=read(fd_client, buf, K_BUF_SIZE));
         if (pthread_mutex_unlock(&socket_mutex)!=0) 
             throw K_THREAD_ERROR;
         if(buf[byte_received-1]=='\0')
@@ -243,19 +243,21 @@ void* GateServer::rec_thread(void* arg)
     // 
     //char ldbsvrip[INET_ADDRSTRLEN] = "192.168.75.164";
     //const uint16_t ldbsvrport = 8888;
-    std::string key = root["req_args"]["cluster_id"].asString();
+    size_t cluster_id = root["req_args"]["cluster_id"].asInt();
     bool skip = false;
     std::string ldback;
+   
    // size_t cluster_id = hash(key);
     //std::cout<<"clusterid="<<cluster_id<<std::endl;
-    std::vector<ip_port >& svrlst = 
+   
+    std::vector<ip_port >* svrlst = 
         gateserver->cs->getServerList(cluster_id);
     std::vector<ip_port >::iterator itr 
-        = svrlst.begin();
+        = svrlst->begin();
     //std::cout<<"svrlst.size()="<<svrlst.size()<<std::endl;
     if (gateserver->sync_client)
     {
-    while(itr!=svrlst.end())
+    while(itr!=svrlst->end())
     {
         std::string ldbsvrip = itr->first;
         const uint16_t ldbsvrport = itr->second;
@@ -296,13 +298,13 @@ void* GateServer::rec_thread(void* arg)
         int* numdone = new int;
         *numdone = 0;
         int* numtotal = new int;
-        *numtotal = svrlst.size();
+        *numtotal = svrlst->size();
         ThreadVar* cso = new ThreadVar(0, 1, 1);
         char* reqstr = new char[request.size()+1];
         memcpy(reqstr, request.c_str(), request.size()+1);
         std::vector<Communicate*>* client_vec = new std::vector<Communicate*>();
         std::vector<std::string*>* ldback_vec = new std::vector<std::string*>();
-        while(itr!=svrlst.end())
+        while(itr!=svrlst->end())
         {
             std::string ldbsvrip = itr->first;
             const uint16_t ldbsvrport = itr->second;

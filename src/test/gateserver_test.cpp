@@ -1,4 +1,4 @@
-#include "GateServerTemp/GateServer.h"
+#include "GateServer/GateServer.h"
 #include "ClusterServer/ClusterServer.h"
 #include <jsoncpp/json/json.h>
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
         cout << "ip: " << gs->getIp() << endl;
         cout << "port: " << gs->getPort() << endl;
         if (join_ip != "" && join_port)
-            gs->join_cluster(join_ip, join_port);
+            gs->joinCluster(join_ip, join_port);
 
         while (true)
         {

@@ -28,8 +28,8 @@ Chord.o: ./src/util/Chord/Chord.cpp
 LevelDbServer.o: ./src/LevelDbServer/LevelDbServer.cpp 
 	$(CC) $(FLAGS) -c ./src/LevelDbServer/LevelDbServer.cpp  -o ./build/LevelDbServer.o
 
-GateServer.o: ./src/GateServerTemp/GateServer.cpp
-	$(CC) $(FLAGS) -c ./src/GateServerTemp/GateServer.cpp -o ./build/GateServer.o
+GateServer.o: ./src/GateServer/GateServer.cpp
+	$(CC) $(FLAGS) -c ./src/GateServer/GateServer.cpp -o ./build/GateServer.o
 
 client.out: ./src/test/client_test.cpp ThreadVar.o Communicate.o Server.o 
 	$(CC) $(FLAGS) ./src/test/client_test.cpp ./build/ThreadVar.o ./build/Communicate.o  ./build/Server.o -lleveldb -ljsoncpp -lpthread -o ./build/client.out 
