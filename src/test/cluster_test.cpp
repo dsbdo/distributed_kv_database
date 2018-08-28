@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 
 
 
-    cs->
+   // cs->
     //cout << "\033[32m DEBUG:: " << cs
     while(1) {
         int clfd = cs->acceptConnect();
