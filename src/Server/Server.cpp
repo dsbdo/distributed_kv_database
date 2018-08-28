@@ -48,7 +48,7 @@ Server::Server(const char *local_ip, const uint16_t local_port)
         else
         {
             inet_pton(AF_INET, local_ip, (void *)&m_server_address.sin_addr);
-            //端口绑定
+            //端口绑定 因为通信的本质是socket之间的通讯，如果不bind的话，listen函数在监听这个socket的时候，并不知道具体的port，只会监听空闲的port
             if (bind(m_socket_fd, (sockaddr *)&m_server_address, sizeof(sockaddr_in)) == -1)
             {
                 throw K_SOCKET_BIND_ERROR;
@@ -87,6 +87,7 @@ int Server::acceptConnect()
         char *client_host_addr_p;
         int comm_socket_fd;
         bool is_known_client = true;
+        //上面的套接字是监听套接字，这个是返回一个全新的与客户端通讯的的套接字
         if ((comm_socket_fd = accept(m_socket_fd, (sockaddr *)&client_addr, &client_addr_len)) < 0)
         {
             std::cerr << "\033[31m"
