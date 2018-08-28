@@ -193,7 +193,7 @@ void *Communicate::recv_thread(void *arg)
     char buf[K_BUF_SIZE];
     ssize_t byte_read = -1;
     std::vector<void *> arg_content = *(std::vector<void *> *)arg;
-    std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
+    //std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
     int sock_fd = *(int *)arg_content[1];
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
     pthread_mutex_lock(sock_mutex);

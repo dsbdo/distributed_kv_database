@@ -62,6 +62,14 @@ int main(int argc, char **argv)
             std::cout << "go on!!!" << std::endl;
             if (clfd < 0)
                 throw K_SOCKET_ACCEPT_ERROR;
+            //直接打印一下请求消息
+            // char buf[1024];
+            // memset(buf, 0, 1024);
+            // int byte_recv = read(clfd, buf, 1024);
+            // if(byte_recv > 0) {
+            //     std::cout << buf << std::endl;
+            //     close(clfd);
+            // }
             gs->requestHandle(clfd);
         }
     }

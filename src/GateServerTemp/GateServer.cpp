@@ -86,7 +86,7 @@ void* GateServer::main_thread(void* arg) {
 }
 
 void* GateServer::recv_thread(void* arg) {
-    std::vector<void *> &argv = *(std::vector<void *> *)arg;
+  std::vector<void *> &argv = *(std::vector<void *> *)arg;
   int clfd = *(int *)argv[0];
   pthread_mutex_t &socket_mutex = ((ThreadVar*)argv[1])->m_mutex_arr[0];
   int byte_received = -1;
@@ -109,7 +109,8 @@ void* GateServer::recv_thread(void* arg) {
     byte_received = read(clfd, buf, K_BUF_SIZE);
     if (pthread_mutex_unlock(&socket_mutex) != 0)
       throw K_THREAD_ERROR;
-    if (buf[byte_received - 1] == '\0')
+      //个人认为这里不需要减一
+    if (buf[byte_received ] == '\0')
       done = true;
     request = request + std::string(buf);
   }
@@ -133,6 +134,7 @@ void* GateServer::recv_thread(void* arg) {
   }
   //处理退出请求
   std::string req_type = root["req_type"].asString();
+  
   if (req_type == "exit")
   { //levelDB 服务器请求退出
     //pthread_mutex_lock(&socket_mutex);
@@ -169,6 +171,13 @@ void* GateServer::recv_thread(void* arg) {
   std::cout << "\033[32mDEBUG::GateServer::target cluster id is: " << cluster_id << "\033[0m" << std::endl;
   std::vector<ip_port>* svrlst =
       gatesvr->cs->getServerList(cluster_id);
+  //这里将对应的serverList进行打印
+  std::cout << "DEBUG::GateServer print serverList" << std::endl;
+  for(auto itr = svrlst->begin(); itr != svrlst->end(); itr++) {
+    std::cout << "\033[32mDEBUG::GateServer::cluster id is: " << cluster_id << " serverList::ip is: "<<itr->first <<"port is:" << itr->second <<"\033[0m" << std::endl;
+  }
+
+  
   std::vector<ip_port>::iterator itr = svrlst->begin();
   if (gatesvr->sync_client)
   {

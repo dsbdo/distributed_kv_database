@@ -11,7 +11,7 @@ ClusterServer::ClusterServer(const char *ip, const uint16_t port, bool is_master
 {
     cluster_server_obj = this; //不是很明白搞这个有啥用，直接用this不好吗
     //启动集群服务器
-    std::cout << "\033[32mDEBUG::ClusterServer Init ip is: " << ip << " 端口是 port: " << port << "\033[0m"<<std::endl;
+    std::cout << "\033[32mDEBUG::ClusterServer Init ip is: " << ip << " 端口是 port: " << port << "\033[0m" << std::endl;
     //初始化锁变量
     pthread_mutex_init(&m_index_lock, NULL);
     //初始化集群中集群服务器相关信息,标明该服务器本身已经存在集群服务器中
@@ -245,7 +245,7 @@ void ClusterServer::newMasterResponseHandle(std::string response_msg)
 ClusterServer::ClusterMinHeap::ClusterMinHeap()
 {
     std::cout << "min heap has been created" << std::endl;
-     cluster_id_size cis;
+    cluster_id_size cis;
     //heap.push_back(cis);
     //初始化堆
     for (int i = 0; i < K_MAX_CLUSTER; i++)
@@ -278,7 +278,7 @@ void ClusterServer::ClusterMinHeap::changeSize(uint16_t cluster_id, uint16_t new
             else if (cluster_id_index * 2 + 1 < heap.size())
             {
                 //仅有左子树
-                swap_index = swap_index * 2 + 1;
+                swap_index = cluster_id_index* 2 + 1;
             }
             else
             {
@@ -309,7 +309,7 @@ void ClusterServer::ClusterMinHeap::changeSize(uint16_t cluster_id, uint16_t new
         heap[cluster_id_index].second = new_cluster_size;
         while ((cluster_id_index - 1) / 2 >= 0)
         {
-            int swap_index = cluster_id_index / 2;
+            int swap_index = (cluster_id_index - 1)/ 2;
             if (new_cluster_size < heap[swap_index].second)
             {
 
@@ -332,7 +332,6 @@ uint16_t ClusterServer::ClusterMinHeap::getMinClusterId()
 {
     return heap[0].first;
 }
-
 
 //线程测试完成，未发现问题
 //堆管理结束
@@ -491,7 +490,6 @@ void *ClusterServer::recv_thread(void *arg)
 }
 //线程测试完成， 未发现问题
 
-
 //请求处理.处理结果的信息放在reponse 中，由接受进程进行调用分析，这个一般不会有问题
 void ClusterServer::processClusterRequest(std::string request, std::string &response, ClusterServer *cs)
 {
@@ -528,6 +526,8 @@ void ClusterServer::processClusterRequest(std::string request, std::string &resp
         root.clear();
         root["result"] = "ok";
         root["cluster_id"] = cluster_id;
+        //这里打印堆的信息，检查是否正确
+        std::cout << "\033[34mDEBUG::check if the heap is right\033[0m" << std::endl;
         ip_port exclude;
         //全网广播加入成功
         cs->broadcastUpdateClusterState(exclude);
@@ -668,7 +668,17 @@ uint16_t ClusterServer::registerServer(const std::string ip, const uint16_t port
 {
     int cluster_id = m_cluster_min_heap.getMinClusterId();
     m_cluster_table_leveldb[cluster_id].push_back(ip_port(ip, port));
-    m_cluster_min_heap.changeSize(cluster_id, m_cluster_min_heap.heap[m_cluster_min_heap.cluster_heap_idx[cluster_id]].second + 1);
+    m_cluster_min_heap.changeSize(m_cluster_min_heap.cluster_heap_idx[cluster_id], m_cluster_min_heap.heap[m_cluster_min_heap.cluster_heap_idx[cluster_id]].second + 1);
+    // std::cout << "\033[34mDEBUG::check if the heap is right\033[0m" << std::endl;
+    // for (int i = 0; i < K_MAX_CLUSTER; i++)
+    // {
+    //     std::cout << "\033[32mDEBUG::HEAP::cluster id: " << m_cluster_min_heap.heap[i].first << " size: " << m_cluster_min_heap.heap[i].second<< "\033[0m" << std::endl;
+    // }
+    // for(int i = 0; i < K_MAX_CLUSTER; i++){
+
+    //     std::cout << "\033[32mDEBUG::HEAP::cluster index: " << m_cluster_min_heap.cluster_heap_idx[i]<< "\033[0m" << std::endl;
+    // }
+     //堆的维护基本不会有问题，现在关心的是系统那几个基本变量的维护
     return cluster_id;
 }
 
@@ -686,6 +696,7 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
     while (itr != receiver_set.end())
     {
         //初始化一个通信tcp 连接
+        std::cout << "Broadcast to ip: " << itr->first.c_str() << " port: " << itr->second << std::endl;
         Communicate comm(itr->first.c_str(), itr->second);
         if (errno)
         {
@@ -753,6 +764,8 @@ void ClusterServer::broadcast(const ip_port &exclude, const Json::Value &msg, vo
     }
 }
 
+
+//这一个更新我需要测试一下
 void ClusterServer::updateClusterState(const Json::Value &root)
 {
     std::cout << "\033[32m update cluster state\033[0m" << std::endl;
@@ -812,13 +825,18 @@ void ClusterServer::heartbeatHandler(int sign_num)
             Json::Value heart_beat_msg;
             heart_beat_msg["req_type"] = "heartbeat";
             //将心跳包发给所有的levelDB
-            std::map<ip_port, uint16_t>::iterator leveldb_itr = cluster_server_obj->m_leveldb_2_cluster_map.begin();
-            std::map<ip_port, uint16_t>::iterator leveldb_itr_end = cluster_server_obj->m_leveldb_2_cluster_map.end();
+            //std::map<ip_port, uint16_t>::iterator leveldb_itr = cluster_server_obj->m_leveldb_2_cluster_map.begin();
+            //std::map<ip_port, uint16_t>::iterator leveldb_itr_end = cluster_server_obj->m_leveldb_2_cluster_map.end();
             std::vector<ip_port> leveldb_set;
-            while (leveldb_itr != leveldb_itr_end)
-            {
-                leveldb_set.push_back(leveldb_itr->first);
-                leveldb_itr++;
+            //broadcase 有问题
+            std::cout << "DEBUG::Broadcast: Heart Info"<< std::endl;
+            for(auto itr = cluster_server_obj->m_cluster_table_leveldb.begin(); itr != cluster_server_obj->m_cluster_table_leveldb.end(); itr++) {
+                //leveldb_set.push_back()
+                for(auto itr_second = itr->begin(); itr_second != itr->end(); itr_second++) {
+                    //打印现有的levelDB内容
+                    std::cout << "DEBUG::heartBeat ip is:" << itr_second->first << " port is: " << itr_second->second << std::endl; 
+                    leveldb_set.push_back(*itr_second);
+                }
             }
             //向所有levelDB 服务器发出广播
             cluster_server_obj->broadcast(leveldb_set, heart_beat_msg, _heartbeatLeveldbServerErrHandle);
