@@ -193,7 +193,7 @@ void *Communicate::recv_thread(void *arg)
     char buf[K_BUF_SIZE];
     ssize_t byte_read = -1;
     std::vector<void *> arg_content = *(std::vector<void *> *)arg;
-    //std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
+    std::cout << "str info is: " << *(char*)arg_content[0] << std::endl;
     int sock_fd = *(int *)arg_content[1];
     pthread_mutex_t *sock_mutex = &(((ThreadVar *)arg_content[2])->m_mutex_arr[0]);
     pthread_mutex_lock(sock_mutex);
@@ -202,8 +202,8 @@ void *Communicate::recv_thread(void *arg)
     while (!done)
     {
         memset(buf, 0, K_BUF_SIZE);
-        byte_read = read(sock_fd, buf, K_BUF_SIZE);
-        //这里的byte_read 感觉相当危险，容易数组越界，如果没有回复，该线程阻塞
+        byte_read = read(sock_fd, buf, K_BUF_SIZE); //当没有东西进来的时候，会自动阻塞当前线程，让它睡眠
+        //这里的byte_read 感觉相当危险，容易数组越界
         if (buf[byte_read] == '\0')
         {
             
@@ -236,7 +236,6 @@ void *Communicate::main_thread(void *arg)
     int *numtotal = (int *)(arg_content[4]);
     std::string *levelDB_back = (std::string *)(arg_content[5]);
 
-    //没有声明条件变量
     pthread_cond_t &cv = client_thread_var->m_cv_arr[0];
     pthread_mutex_t &cv_mutex = client_thread_var->m_mutex_arr[0];
 

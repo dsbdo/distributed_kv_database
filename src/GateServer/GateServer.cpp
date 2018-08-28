@@ -69,19 +69,19 @@ void *GateServer::main_thread(void* arg)  //此部分的arg主要分为两部分
                 &rec_thread, 
                 (void*)&pass_arg)
         !=0)
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
         //for send thread:
         if (pthread_create(&thread_arr->m_thread_obj_arr[1], 
                 0, 
                 &send_thread, 
                 (void*)&pass_arg)
         !=0)
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
 
         if (pthread_join(thread_arr->m_thread_obj_arr[0], 0)!=0) //recv thread
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
         if (pthread_join(thread_arr->m_thread_obj_arr[1], 0)!=0) //send thread
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
         delete ackmsg;
         delete so;
     }
@@ -111,7 +111,7 @@ void GateServer::requestHandler(int fd_client)
 
     //创建主线程，把工作交付给主线程处理
     if(pthread_create(&main_thread_obj,0,&main_thread,(void*)pass_arg)!=0)
-        throw THREAD_ERROR;
+        throw K_THREAD_ERROR;
     
 }
 
@@ -136,7 +136,7 @@ void* GateServer::send_thread(void* arg)
         while(ackmsg.empty())
             pthread_cond_wait(&cv, &cv_mutex);
      if (pthread_mutex_unlock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
 
 
     const char* response  = ackmsg.c_str();
@@ -147,11 +147,11 @@ void* GateServer::send_thread(void* arg)
     while(remain_size>0)
     {
         if (pthread_mutex_lock(&socket_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
             //向socket中写入数据，进行通讯
         NO_EINTR(byte_sent = write(fd_client,response,remain_size));
         if (pthread_mutex_unlock(&socket_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         if (byte_sent<0) 
             throw K_FILE_IO_ERROR;
         remain_size -= byte_sent;
@@ -185,10 +185,10 @@ void* GateServer::rec_thread(void* arg)
     {
         memset(buf, 0, BUF_SIZE);
         if (pthread_mutex_lock(&socket_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         NO_EINTR(byte_received=read(clfd, buf, BUF_SIZE));
         if (pthread_mutex_unlock(&socket_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         if(buf[byte_received-1]=='\0')
         done = true;
         request = request + std::string(buf);
@@ -204,13 +204,13 @@ void* GateServer::rec_thread(void* arg)
     {
         //错误的请求信息
         if (pthread_mutex_lock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         *ackmsg = 
         "错误：该请求的内容格式并不符合json格式";
         if (pthread_mutex_unlock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         if (pthread_cond_signal(&cv)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         return 0;
     }
 
@@ -228,32 +228,32 @@ void* GateServer::rec_thread(void* arg)
         root["status"] = "OK";
         root["result"] = "";
         if (pthread_mutex_lock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         *ackmsg = writer.write(root);
         if (pthread_mutex_unlock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         if (pthread_cond_signal(&cv)!=0) 
-            throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         return 0;
     }
 
     std::string sync = root["sync"].asString();
-    (sync=="true")?gateserver->setsync():gateserver->setasync();
-    // pick a leveldb server to forward request
-    // now gateserver acts as client to leveldbserver
+    (sync=="true")?GateServer->setsync():GateServer->setasync();
+    // 根据通讯报文中的req_type key字段中的内容去hash出对应的cluster id然后再广播给这个集群中的server
+    // 
     //char ldbsvrip[INET_ADDRSTRLEN] = "192.168.75.164";
     //const uint16_t ldbsvrport = 8888;
-    std::string key = root["req_args"]["key"].asString();
+    std::string key = root["req_args"]["cluster_id"].asString();
     bool skip = false;
     std::string ldback;
-    size_t cluster_id = hash(key);
+   // size_t cluster_id = hash(key);
     //std::cout<<"clusterid="<<cluster_id<<std::endl;
     std::vector<ip_port >& svrlst = 
-        gateserver->cs->get_server_list(cluster_id);
+        GateServer->cs->getServerList(cluster_id);
     std::vector<ip_port >::iterator itr 
         = svrlst.begin();
     //std::cout<<"svrlst.size()="<<svrlst.size()<<std::endl;
-    if (gateserver->sync_client)
+    if (GateServer->sync_client)
     {
     while(itr!=svrlst.end())
     {
@@ -261,88 +261,95 @@ void* GateServer::rec_thread(void* arg)
         const uint16_t ldbsvrport = itr->second;
     //std::cout<<"ldbsvrip,port="<<ldbsvrip<<","<<ldbsvrport<<std::endl;
         itr++;
-        client clt(ldbsvrip.c_str(), ldbsvrport);
-        ldback = clt.sendstring(request.c_str());
+        Communicate clt(ldbsvrip.c_str(), ldbsvrport);
+        ldback = clt.sendString(request.c_str()); //来自另一方的回文
         root.clear();
+        //如果回文正常，则进行一下个服务器的发送
         if (!reader.parse(ldback,root))
         continue;
         if (root["status"].asString()=="OK"&&!skip)
         {
-        skip = true;
-        if (pthread_mutex_lock(&cv_mutex)!=0) continue;
-        *ackmsg = ldback;
-        if (pthread_mutex_unlock(&cv_mutex)!=0) continue;
+            skip = true;
+            if (pthread_mutex_lock(&cv_mutex)!=0) 
+                continue;
+            *ackmsg = ldback;
+            if (pthread_mutex_unlock(&cv_mutex)!=0) 
+                continue;
         }
     }
     if (!skip) //no leveldb response is positive
     {
         if (pthread_mutex_lock(&cv_mutex)!=0) 
-        throw THREAD_ERROR;
+            throw K_THREAD_ERROR;
         *ackmsg = ldback;
         if (pthread_mutex_unlock(&cv_mutex)!=0) 
-        throw THREAD_ERROR;
-        if (pthread_cond_signal(&cv)!=0) throw THREAD_ERROR;
-        return 0;
+            throw K_THREAD_ERROR;
+        if (pthread_cond_signal(&cv)!=0) 
+            throw K_THREAD_ERROR;
+            return 0;
     }
-    if (pthread_cond_signal(&cv)!=0) throw THREAD_ERROR;
+    if (pthread_cond_signal(&cv)!=0) 
+        throw K_THREAD_ERROR;
     }
     else //async client, i.e. call client::sendstring_noblock
     {
-    int* numdone = new int;
-    *numdone = 0;
-    int* numtotal = new int;
-    *numtotal = svrlst.size();
-    ThreadVar* cso = new ThreadVar(0, 1, 1);
-    char* reqstr = new char[request.size()+1];
-    memcpy(reqstr, request.c_str(), request.size()+1);
-    std::vector<client*>* client_vec = new std::vector<client*>();
-    std::vector<std::string*>* ldback_vec = new std::vector<std::string*>();
-    while(itr!=svrlst.end())
-    {
-        std::string ldbsvrip = itr->first;
-        const uint16_t ldbsvrport = itr->second;
-        itr++;
-        std::string* ldback = new std::string;
-        *ldback = "";
-        ldback_vec->push_back(ldback);
-        client* clt = new client(ldbsvrip.c_str(), ldbsvrport);
-        clt->sendstring_noblock(reqstr, cso, numdone, numtotal, ldback);
-        client_vec->push_back(clt);
-    }
-    //for eventual consistency, we wait for at least one ack.
-    if (pthread_mutex_lock(&cso->_mutex_arr[0])) throw THREAD_ERROR;
-    while(!(*numdone))
-        pthread_cond_wait(&cso->_cv_arr[0], &cso->_mutex_arr[0]);
-    if (pthread_mutex_unlock(&cso->_mutex_arr[0])) throw THREAD_ERROR;
-    //delete cso;
-    std::vector<void*>* cleanarg = new std::vector<void*>;
-    cleanarg->push_back((void*)cso);
-    cleanarg->push_back((void*)numdone);
-    cleanarg->push_back((void*)numtotal);
-    cleanarg->push_back((void*)reqstr);
-    cleanarg->push_back((void*)client_vec);
-    cleanarg->push_back((void*)ldback_vec);
-    pthread_t cleanup_thread; //clean up numdone in background
-    if (pthread_create(&cleanup_thread, 
-        0, &cleanup_thread_handler, (void*)cleanarg))
-        throw THREAD_ERROR;
-
-    int ldbacksz = ldback_vec->size();
-    for (int i=0; i<ldbacksz; i++)
-    {
-        std::string* ldback = (*ldback_vec)[i];
-        if (*ldback!="")
+        int* numdone = new int;
+        *numdone = 0;
+        int* numtotal = new int;
+        *numtotal = svrlst.size();
+        ThreadVar* cso = new ThreadVar(0, 1, 1);
+        char* reqstr = new char[request.size()+1];
+        memcpy(reqstr, request.c_str(), request.size()+1);
+        std::vector<Communicate*>* client_vec = new std::vector<Communicate*>();
+        std::vector<std::string*>* ldback_vec = new std::vector<std::string*>();
+        while(itr!=svrlst.end())
         {
-        if (pthread_mutex_lock(&cv_mutex)!=0) 
-            throw THREAD_ERROR;
-        *ackmsg = *ldback;
-        if (pthread_mutex_unlock(&cv_mutex)!=0)
-            throw THREAD_ERROR;
-        break;
+            std::string ldbsvrip = itr->first;
+            const uint16_t ldbsvrport = itr->second;
+            itr++;
+            std::string* ldback = new std::string;
+            *ldback = "";
+            ldback_vec->push_back(ldback);
+            Communicate* clt = new Communicate(ldbsvrip.c_str(), ldbsvrport);
+            clt->sendStringNoBlock(reqstr, cso, numdone, numtotal, ldback);
+            client_vec->push_back(clt);
         }
-    } 
-        
-    if (pthread_cond_signal(&cv)!=0) throw THREAD_ERROR;
+        //for eventual consistency, we wait for at least one ack.
+        if (pthread_mutex_lock(&cso->_mutex_arr[0])) 
+            throw K_THREAD_ERROR;
+        while(!(*numdone))
+            pthread_cond_wait(&cso->_cv_arr[0], &cso->_mutex_arr[0]);
+        if (pthread_mutex_unlock(&cso->_mutex_arr[0])) throw K_THREAD_ERROR;
+        //delete cso;
+        std::vector<void*>* cleanarg = new std::vector<void*>;
+        cleanarg->push_back((void*)cso);
+        cleanarg->push_back((void*)numdone);
+        cleanarg->push_back((void*)numtotal);
+        cleanarg->push_back((void*)reqstr);
+        cleanarg->push_back((void*)client_vec);
+        cleanarg->push_back((void*)ldback_vec);
+        pthread_t cleanup_thread; //clean up numdone in background
+        if (pthread_create(&cleanup_thread, 
+            0, &cleanup_thread_handler, (void*)cleanarg))
+            throw K_THREAD_ERROR;
+
+        int ldbacksz = ldback_vec->size();
+        for (int i=0; i<ldbacksz; i++)
+        {
+            std::string* ldback = (*ldback_vec)[i];
+            if (*ldback!="")
+            {
+            if (pthread_mutex_lock(&cv_mutex)!=0) 
+                throw K_THREAD_ERROR;
+            *ackmsg = *ldback;
+            if (pthread_mutex_unlock(&cv_mutex)!=0)
+                throw K_THREAD_ERROR;
+            break;
+            }
+        } 
+            
+        if (pthread_cond_signal(&cv)!=0) 
+            throw K_THREAD_ERROR;
     }
     return 0;
 }
@@ -354,14 +361,15 @@ void* GateServer::cleanup_thread(void* arg)
   int* numdone = (int*)((*cleanarg)[1]);
   int* numtotal = (int*)((*cleanarg)[2]);
   char* reqstr = (char*)((*cleanarg)[3]);
-  std::vector<client*>* client_vec =
-    (std::vector<client*>*)((*cleanarg)[4]);
+  std::vector<Communicate*>* client_vec =
+    (std::vector<Communicate*>*)((*cleanarg)[4]);
   std::vector<std::string*>* ldback_vec =
     (std::vector<std::string*>*)((*cleanarg)[5]);
-  if (pthread_mutex_lock(&cso->_mutex_arr[0])) throw THREAD_ERROR;
+  if (pthread_mutex_lock(&cso->m_mutex_arr[0])) throw K_THREAD_ERROR;
   while (*numdone < *numtotal) 
-    pthread_cond_wait(&cso->_cv_arr[0], &cso->_mutex_arr[0]);
-  if (pthread_mutex_unlock(&cso->_mutex_arr[0])) throw THREAD_ERROR;
+    pthread_cond_wait(&cso->m_cv_arr[0], &cso->m_mutex_arr[0]);
+  if (pthread_mutex_unlock(&cso->m_mutex_arr[0])) 
+        throw K_THREAD_ERROR;
   delete cso;
   delete numdone;
   delete numtotal;
