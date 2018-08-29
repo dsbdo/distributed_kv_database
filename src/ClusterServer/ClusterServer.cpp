@@ -698,11 +698,14 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
         //初始化一个通信tcp 连接
         std::cout << "Broadcast to ip: " << itr->first.c_str() << " port: " << itr->second << std::endl;
         Communicate comm(itr->first.c_str(), itr->second);
+        //如果连接失败
         if (errno)
         {
+            std::cout << "\033[31mDEBUG::leveldb broadcast error handle \033[0m"  << std::endl;
             //如果有错误处理函数
             if (err_handle)
             {
+                std::cout << "\033[31mDEBUG::Come in leveldb broadcast error handle \033[0m"  << std::endl;
                 ip_port dead_peer = *itr;
                 err_handle((void *)&dead_peer);
             }
@@ -714,10 +717,14 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
             continue;
         }
         Json::StyledWriter writer;
+        std::cout << "DEBUG::Broadcast msg is: " << msg << std::endl;
         std::string output_config = writer.write(msg);
+        //这里是阻塞型的
         std::string resp = comm.sendString(output_config.c_str());
+        std::cout << "levelDB response is: "<< resp << std::endl;
         if (response_handle)
         {
+            std::cout << "leveldb broadcast response handle"  << std::endl;
             response_handle((void *)&resp);
         }
         itr++;
@@ -727,9 +734,9 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
 //向所有的cluster server 进行广播通信
 void ClusterServer::broadcast(const ip_port &exclude, const Json::Value &msg, void (*err_handle)(void *), void (*response_handle)(void *))
 {
-    std::map<ip_port, bool>::iterator itr = m_existing_cs_set.begin();
-    std::map<ip_port, bool>::iterator itr_end = m_existing_cs_set.end();
-    ip_port self_ip_port(getIp(), getPort());
+   std::map<ip_port, bool>::iterator itr = m_existing_cs_set.begin();
+   std::map<ip_port, bool>::iterator itr_end = m_existing_cs_set.end();
+   ip_port self_ip_port(getIp(), getPort());
     while (itr != itr_end)
     {
         if (itr->first == exclude || itr->first == self_ip_port)
@@ -843,13 +850,13 @@ void ClusterServer::heartbeatHandler(int sign_num)
 
             //向所有集群服务器发送心跳包
             ip_port dummy;
-            cluster_server_obj->broadcast(dummy, heart_beat_msg, _heartbeatClusterServerErrHandle);
-            if (errno)
-            {
-                time(&cluster_server_obj->m_timestamp);
-                ip_port dummy_exclude;
-                cluster_server_obj->broadcastUpdateClusterState(dummy_exclude);
-            }
+            //cluster_server_obj->broadcast(dummy, heart_beat_msg, _heartbeatClusterServerErrHandle);
+            // if (errno)
+            // {
+            //     time(&cluster_server_obj->m_timestamp);
+            //     ip_port dummy_exclude;
+            //     cluster_server_obj->broadcastUpdateClusterState(dummy_exclude);
+            // }
         }
         else
         {

@@ -201,14 +201,15 @@ void *Communicate::recv_thread(void *arg)
     std::string* ackmsg = (std::string *)arg_content[3];
     while (!done)
     {
+        //如果一直没有人回复是否会错误退出?
         memset(buf, 0, K_BUF_SIZE);
         byte_read = read(sock_fd, buf, K_BUF_SIZE); //当没有东西进来的时候，会自动阻塞当前线程，让它睡眠
+        std::cout << "DEBUG::communicate get info length is: " << byte_read << std::endl;
+        std::cout << "DEBUG::communicate buf[byte_read] is: " << buf[byte_read] << std::endl;
         //这里的byte_read 感觉相当危险，容易数组越界
         if (buf[byte_read] == '\0')
         {
-            
-            done = true;
-           
+            done = true;  
         }
          *ackmsg += std::string(buf);   //监听sock_fd中的内容，把sock_fd中的内容添加到ack中，这样子每一组send,socket_fd,thread_var,ack就是一起的
     }

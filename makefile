@@ -2,7 +2,7 @@ CC = g++
 FLAGS += -std=c++11 -g -I./src -I./src/include -I./src/util -I./src/test
 
 
-all: client.out server.out leveldbserver.out clusterserver.out gateserver.out
+all: client.out server.out leveldbserver.out clusterserver.out gateserver.out leveldbtest.out
 
 #线程变量类
 ThreadVar.o: ./src/util/ThreadVar/ThreadVar.cpp
@@ -46,5 +46,9 @@ leveldbserver.out: ./src/test/level_db_test.cpp LevelDbServer.o Syncobj.o  Commu
 
 gateserver.out: ./src/test/gateserver_test.cpp ./src/test/debug.cpp Communicate.o Server.o ThreadVar.o Syncobj.o  GateServer.o  ClusterServer.o 
 	$(CC) $(FLAGS) ./src/test/gateserver_test.cpp ./src/test/debug.cpp ./build/Communicate.o ./build/Server.o ./build/ClusterServer.o ./build/ThreadVar.o ./build/Syncobj.o ./build/GateServer.o -o ./build/gateserver.out -lleveldb -ljsoncpp -lpthread
+
+
+leveldbtest.out: ./src/test/leveldbTest.cpp ThreadVar.o
+	$(CC) $(FLAGS) ./src/test/leveldbTest.cpp ./build/ThreadVar.o -o ./build/leveldbtest.out -lpthread -ljsoncpp -lleveldb
 clean:
 	rm -rf ./build/*.out  ./build/*.o 

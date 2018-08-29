@@ -106,7 +106,7 @@ void LevelDbServer::leaveCluster()
 
 void LevelDbServer::requestHandle(int clfd)
 {
-    //声明线程id
+    //声明线程id，这里需要回应心跳包
     pthread_t main_thread_obj;
     int* clfdptr=new int;//在主线程中删除
     *clfdptr=clfd;
@@ -147,8 +147,7 @@ void* LevelDbServer::mainThread(void* arg)
             &recvThread,
             (void*)&thread_arg)
             !=0)
-    {   
-        //::exit(1);
+    {  
         throw K_THREAD_ERROR;
     }
     if(pthread_create(&so->_thread_obj_arr[1],
@@ -157,7 +156,6 @@ void* LevelDbServer::mainThread(void* arg)
             (void*)&thread_arg)
             !=0)
     {   
-        //::exit(1);
         throw K_THREAD_ERROR;
     }
 
@@ -223,8 +221,10 @@ void* LevelDbServer::recvThread(void* arg)
     }
 
     std::string response;
+    std::cout << "levelDB get Info is: " << request  <<std::endl;
     //处理请求
     processLeveldbRequest(request,response,ldbsvr);
+    std::cout << "levelDB response Info is" << response << std::endl;
     //使用互斥量把资源锁住，完成任务后再释放
     if(pthread_mutex_lock(&cv_mutex)!=0)
     {
@@ -249,13 +249,13 @@ void* LevelDbServer::recvThread(void* arg)
 
 void* LevelDbServer::sendThread(void* arg)
 {
+    std::cout << "Debug::come in send thread" << std::endl;
     std::vector<void*>& argv=*(std::vector<void*>*)arg;
     int clfd=*(int*)argv[0];
     pthread_mutex_t& socket_mutex=((Syncobj*)argv[1])->_mutex_arr[0];
     pthread_mutex_t& cv_mutex=((Syncobj*)argv[1])->_mutex_arr[1];
     pthread_cond_t& cv=((Syncobj*)argv[1])->_cv_arr[0];
     std::string response_str=(*(std::string*)argv[2]);
-
     //在recvThread完成之前此线程一直等待
     //同时从leveldb server中得到回应
     if (pthread_mutex_lock(&cv_mutex)!=0)
@@ -263,14 +263,15 @@ void* LevelDbServer::sendThread(void* arg)
         //::exit(1);
         throw K_THREAD_ERROR;
     }
+    //如果响应内容为空，则睡
     while(response_str.empty())
         pthread_cond_wait(&cv,&cv_mutex);
-    if (pthread_mutex_unlock(&cv_mutex)!=0)
-    {
+    
+    if (pthread_mutex_unlock(&cv_mutex)!=0){
         //::exit(1);
         throw K_THREAD_ERROR;
     }
-
+    std::cout << "LevelDB::send_thread is: " << response_str << std::endl;
     const char* response=response_str.c_str();
     size_t response_len=strlen(response)+1;
     size_t response_msg_size=response_len;
@@ -283,19 +284,18 @@ void* LevelDbServer::sendThread(void* arg)
             //::exit(1);
             throw K_THREAD_ERROR;
         }
+        //反止出现系统中断
         NO_EINTR(byte_sent = write(clfd,response,response_msg_size));
-        if (pthread_mutex_unlock(&socket_mutex)!=0)
-        {
-            //::exit(1);
+        if (pthread_mutex_unlock(&socket_mutex)!=0) {
             throw K_THREAD_ERROR;
         }
-
         if(byte_sent<0)
             throw K_FILE_IO_ERROR;
-        
         response_msg_size-=byte_sent;
         response+=byte_sent;
     }
+
+    std::cout << "LevelDB::send_thread over" << std::endl;
     return 0;
 }
 
@@ -353,6 +353,11 @@ void LevelDbServer::processLeveldbRequest(std::string& request,
         ldbsvr->m_status = leveldb::Status::OK();
         root.clear();
         root["result"] = "";
+    }
+    else if(req_type == "heartbeat") {
+        //这里是心跳包，直接响应即可
+        std::cout << "recv heart beat prepare to response it" << std::endl;
+        root["result"] = "OK";
     }
     else
     {

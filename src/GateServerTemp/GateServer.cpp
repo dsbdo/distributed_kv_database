@@ -98,8 +98,6 @@ void* GateServer::recv_thread(void* arg) {
   std::string *ackmsg = (std::string *)argv[2];
   bool *client_exit = (bool *)argv[3];
   GateServer *gatesvr = (GateServer *)argv[4];
-
-
   while (!done)
   {
     memset(buf, 0, K_BUF_SIZE);
@@ -169,8 +167,7 @@ void* GateServer::recv_thread(void* arg) {
   size_t cluster_id = root["req_args"]["cluster_id"].asInt();
 
   std::cout << "\033[32mDEBUG::GateServer::target cluster id is: " << cluster_id << "\033[0m" << std::endl;
-  std::vector<ip_port>* svrlst =
-      gatesvr->cs->getServerList(cluster_id);
+  std::vector<ip_port>* svrlst = gatesvr->cs->getServerList(cluster_id);
   //这里将对应的serverList进行打印
   std::cout << "DEBUG::GateServer print serverList" << std::endl;
   for(auto itr = svrlst->begin(); itr != svrlst->end(); itr++) {
