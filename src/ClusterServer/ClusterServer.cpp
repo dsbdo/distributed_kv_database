@@ -696,7 +696,7 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
     while (itr != receiver_set.end())
     {
         //初始化一个通信tcp 连接
-        std::cout << "Broadcast to ip: " << itr->first.c_str() << " port: " << itr->second << std::endl;
+        std::cout << "\033[32mDEBUG::Broadcast to ip: " << itr->first.c_str() << " port: " << itr->second << "\033[0m" << std::endl;
         Communicate comm(itr->first.c_str(), itr->second);
         //如果连接失败
         if (errno)
@@ -721,7 +721,7 @@ void ClusterServer::broadcast(const std::vector<ip_port> &receiver_set, const Js
         std::string output_config = writer.write(msg);
         //这里是阻塞型的
         std::string resp = comm.sendString(output_config.c_str());
-        std::cout << "levelDB response is: "<< resp << std::endl;
+        //std::cout << "levelDB response is: "<< resp << std::endl;
         if (response_handle)
         {
             std::cout << "leveldb broadcast response handle"  << std::endl;

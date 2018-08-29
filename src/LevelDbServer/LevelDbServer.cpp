@@ -141,16 +141,16 @@ void* LevelDbServer::mainThread(void* arg)
     thread_arg.push_back((void*)ackmsg);
     thread_arg.push_back((void*)ldbsvr);
 
-    std::cout<<"0000000000000000000000000"<<std::endl;
+   // std::cout<<"0000000000000000000000000"<<std::endl;
     //第一个线程是接收，第二个线程是发送
     if(pthread_create(&so->_thread_obj_arr[0],
             0,
             &recvThread,
             (void*)&thread_arg)
-            ==0)
+            !=0)
     {  
-        std::cout<<"1111111111111111111111"<<std::endl;
-        //throw K_THREAD_ERROR;
+        //std::cout<<"1111111111111111111111"<<std::endl;
+        throw K_THREAD_ERROR;
     }
 
     //等待线程结束，属于线程间同步的操作
@@ -164,10 +164,10 @@ void* LevelDbServer::mainThread(void* arg)
             0,
             &sendThread,
             (void*)&thread_arg)
-            ==0)
+            !=0)
     {   
        
-        //throw K_THREAD_ERROR;
+        throw K_THREAD_ERROR;
     }
     if(pthread_join(so->_thread_obj_arr[1],0)!=0)
     {
