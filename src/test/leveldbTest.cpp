@@ -12,9 +12,9 @@ int main(int argc, char const *argv[])
 
     std::string msg = writer.write(root);
     Communicate comm("127.0.0.1", 7001);
-    for(int i = 0; i < 32; i++) {
-
-        std::cout << "response: "<<comm.sendString(msg.c_str()) << std::endl; 
-    }
+    std::cout<<"xinxi "<<comm.sendString(msg.c_str())<<" xinxi"<<std::endl;
+    Communicate comm2("127.0.0.1", 7001);
+    std::cout << "response: "<<comm2.sendString(msg.c_str()) << std::endl; 
+    
     return 0;
 }

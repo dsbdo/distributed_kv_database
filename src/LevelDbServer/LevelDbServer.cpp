@@ -141,22 +141,16 @@ void* LevelDbServer::mainThread(void* arg)
     thread_arg.push_back((void*)ackmsg);
     thread_arg.push_back((void*)ldbsvr);
 
+    std::cout<<"0000000000000000000000000"<<std::endl;
     //第一个线程是接收，第二个线程是发送
     if(pthread_create(&so->_thread_obj_arr[0],
             0,
             &recvThread,
             (void*)&thread_arg)
-            !=0)
+            ==0)
     {  
-        throw K_THREAD_ERROR;
-    }
-    if(pthread_create(&so->_thread_obj_arr[1],
-            0,
-            &sendThread,
-            (void*)&thread_arg)
-            !=0)
-    {   
-        throw K_THREAD_ERROR;
+        std::cout<<"1111111111111111111111"<<std::endl;
+        //throw K_THREAD_ERROR;
     }
 
     //等待线程结束，属于线程间同步的操作
@@ -165,19 +159,28 @@ void* LevelDbServer::mainThread(void* arg)
         //::exit(1);
         throw K_THREAD_ERROR;
     }
+
+    if(pthread_create(&so->_thread_obj_arr[1],
+            0,
+            &sendThread,
+            (void*)&thread_arg)
+            ==0)
+    {   
+       
+        //throw K_THREAD_ERROR;
+    }
     if(pthread_join(so->_thread_obj_arr[1],0)!=0)
     {
         //::exit(1);
         throw K_THREAD_ERROR;
     }
-
     delete so;
     delete ackmsg;
     delete clfdptr;
     delete (std::vector<void*>*)arg;
 
-    if(close(clfd)<0)
-        throw K_SOCKET_CLOSE_ERROR;
+     if(close(clfd)<0)
+         throw K_SOCKET_CLOSE_ERROR;
     return 0;
 }
 
@@ -237,7 +240,6 @@ void* LevelDbServer::recvThread(void* arg)
         //::exit(1);
         throw K_THREAD_ERROR;
     }
-
     //发送信号给另一个正在处于阻塞状态的线程，使它脱离阻塞状态继续执行
     if(pthread_cond_signal(&cv)!=0)
     {
@@ -266,7 +268,6 @@ void* LevelDbServer::sendThread(void* arg)
     //如果响应内容为空，则睡
     while(response_str.empty())
         pthread_cond_wait(&cv,&cv_mutex);
-    
     if (pthread_mutex_unlock(&cv_mutex)!=0){
         //::exit(1);
         throw K_THREAD_ERROR;
@@ -276,7 +277,7 @@ void* LevelDbServer::sendThread(void* arg)
     size_t response_len=strlen(response)+1;
     size_t response_msg_size=response_len;
     size_t byte_sent=-1;
-
+    
     while(response_msg_size>0)
     {
         if (pthread_mutex_lock(&socket_mutex)!=0)
@@ -294,7 +295,6 @@ void* LevelDbServer::sendThread(void* arg)
         response_msg_size-=byte_sent;
         response+=byte_sent;
     }
-
     std::cout << "LevelDB::send_thread over" << std::endl;
     return 0;
 }

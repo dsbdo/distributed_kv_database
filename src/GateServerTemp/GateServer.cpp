@@ -165,7 +165,6 @@ void* GateServer::recv_thread(void* arg) {
   //size_t cluster_id = hash(key);//为何要哈希取值呢
   //通过增加字段来通过调试
   size_t cluster_id = root["req_args"]["cluster_id"].asInt();
-
   std::cout << "\033[32mDEBUG::GateServer::target cluster id is: " << cluster_id << "\033[0m" << std::endl;
   std::vector<ip_port>* svrlst = gatesvr->cs->getServerList(cluster_id);
   //这里将对应的serverList进行打印
