@@ -7,16 +7,17 @@
 #include "Communicate/Communicate.h"
 #include "ClusterServer/ClusterServer.h"
 #include <jsoncpp/json/json.h>
+#include <stdio.h>
 
 class GateServer : public Server
 {
     public :
-        GateSever(const uint16_t port_gs,  //作为gateserver的端口号
+        GateServer(const uint16_t port_gs,  //作为gateserver的端口号
                   const uint16_t port_cs, //作为clusterserver的端口号
-                  const char* ip = null , //ip地址，默认为null，可以通过检索网卡自动获取
+                  const char* ip = NULL , //ip地址，默认为null，可以通过检索网卡自动获取
                   bool master = false );    //是否要成为主服务器，因为主服务器负责各个cluster的广播
 
-        virtual void requestHandler(int fd_client); //客户端的filedescriptor
+        virtual void requestHandle(int fd_client); //客户端的filedescriptor
         virtual ~GateServer();
         void setsync(){sync_client = true;};
         void setasync(){sync_client = false;};
@@ -29,7 +30,7 @@ class GateServer : public Server
         static void *cluster_server_Init(void*); //用于初始化相对应的cluster
         static void *clean_thread(void*); //用于清楚所有线程
         ClusterServer *cs; //???
-        bool sysc_client;
+        bool sync_client;
 
 
 
