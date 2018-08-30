@@ -28,8 +28,8 @@ Chord.o: ./src/util/Chord/Chord.cpp
 LevelDbServer.o: ./src/LevelDbServer/LevelDbServer.cpp 
 	$(CC) $(FLAGS) -c ./src/LevelDbServer/LevelDbServer.cpp  -o ./build/LevelDbServer.o
 
-GateServer.o: ./src/GateServer/GateServer.cpp
-	$(CC) $(FLAGS) -c ./src/GateServer/GateServer.cpp -o ./build/GateServer.o
+GateServer.o: ./src/GateServerTemp/GateServer.cpp
+	$(CC) $(FLAGS) -c ./src/GateServerTemp/GateServer.cpp -o ./build/GateServer.o
 
 client.out: ./src/test/client_test.cpp ThreadVar.o Communicate.o Server.o 
 	$(CC) $(FLAGS) ./src/test/client_test.cpp ./build/ThreadVar.o ./build/Communicate.o  ./build/Server.o -lleveldb -ljsoncpp -lpthread -o ./build/client.out 
@@ -44,8 +44,8 @@ leveldbserver.out: ./src/test/level_db_test.cpp LevelDbServer.o Syncobj.o  Commu
 	$(CC) $(FLAGS) ./src/test/level_db_test.cpp ./build/Syncobj.o ./build/Communicate.o ./build/Chord.o ./build/ThreadVar.o ./build/Server.o ./build/LevelDbServer.o -o ./build/leveldbserver.out -lleveldb -ljsoncpp -lpthread
 
 
-gateserver.out: ./src/test/gateserver_test.cpp ./src/test/debug.cpp Communicate.o Server.o ThreadVar.o Syncobj.o  GateServer.o  ClusterServer.o 
-	$(CC) $(FLAGS) ./src/test/gateserver_test.cpp ./src/test/debug.cpp ./build/Communicate.o ./build/Server.o ./build/ClusterServer.o ./build/ThreadVar.o ./build/Syncobj.o ./build/GateServer.o -o ./build/gateserver.out -lleveldb -ljsoncpp -lpthread
+gateserver.out: ./src/test/gateserver_test.cpp ./src/test/debug.cpp GateServer.o Communicate.o Server.o ThreadVar.o Syncobj.o  ClusterServer.o 
+	$(CC) $(FLAGS) ./src/test/gateserver_test.cpp ./src/test/debug.cpp  ./build/Communicate.o ./build/Server.o ./build/ClusterServer.o ./build/ThreadVar.o ./build/Syncobj.o ./build/GateServer.o -o ./build/gateserver.out -lleveldb -ljsoncpp -lpthread
 
 
 leveldbtest.out: ./src/test/leveldbTest.cpp ThreadVar.o

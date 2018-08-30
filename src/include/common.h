@@ -40,7 +40,7 @@ const uint16_t K_THREAD_ERROR = 11;
 const uint16_t K_DB_FAIL = 12;
 const uint16_t K_FILE_IO_ERROR = 7;
 const int K_BUF_SIZE = 99999;
-const uint K_MAX_CLUSTER = 16;
+const uint K_MAX_CLUSTER = 3;
 
 const uint16_t K_MAX_CONNECT = 5;
 //每十秒发送一个心跳包

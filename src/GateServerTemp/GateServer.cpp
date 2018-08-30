@@ -211,6 +211,7 @@ void* GateServer::recv_thread(void* arg) {
         throw K_THREAD_ERROR;
       return 0;
     }
+    //有一台响应就返回一台服务器的消息，响应给
     if (pthread_cond_signal(&cv) != 0)
       throw K_THREAD_ERROR;
   }
