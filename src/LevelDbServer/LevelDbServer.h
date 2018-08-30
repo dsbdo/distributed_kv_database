@@ -24,9 +24,9 @@ public:
         const uint16_t self_port,
         std::string cluster_svr_ip,
         const char self_ip[]=NULL,
-        std::string dbdir="/database/database_0");//这个数据库地址有待改正
-    virtual void requestHandle(int clfd);//传个文件描述符干什么
-    virtual ~LevelDbServer(); //为什么纯虚函数会报错
+        std::string dbdir="/database/database_0");//这个数据库地址可以修改
+    virtual void requestHandle(int clfd);
+    virtual ~LevelDbServer();
 
 private:
     static void processLeveldbRequest(std::string& request,
@@ -48,9 +48,9 @@ private:
     void leaveCluster();
 
     //chord接口
-    chordModuleNS::chordModule* m_chordhd1; //这东西干嘛的
+    chordModuleNS::chordModule* m_chordhd1;
 
-    Syncobj m_chordso;//这个也不知道干嘛的
+    Syncobj m_chordso;
     static void* chordInit(void*);
 };
 
